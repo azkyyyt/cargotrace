@@ -1,0 +1,568 @@
+{
+	"info": {
+		"_postman_id": "cargotrace-rest-api-collection",
+		"name": "CargoTrace REST API Collection",
+		"description": "Complete Postman collection for CargoTrace Global Shipment Visibility & Tracking Platform (Web Programming 2 Final Project / UAS). Includes Auth, Shipments, Tracking Events, Exceptions, Carriers, and Locations.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://127.0.0.1:8000/api",
+			"type": "string"
+		},
+		{
+			"key": "bearerToken",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Authentication",
+			"item": [
+				{
+					"name": "Register New Customer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"John Doe Logistics\",\n    \"email\": \"johndoe@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\",\n    \"role\": \"customer\",\n    \"company\": \"Pacific Traders Inc\",\n    \"phone\": \"+62 812-3456-7890\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["register"]
+						}
+					}
+				},
+				{
+					"name": "Login (Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.token) {",
+									"    pm.collectionVariables.set('bearerToken', jsonData.data.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@cargotrace.test\",\n    \"password\": \"password\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["login"]
+						}
+					}
+				},
+				{
+					"name": "Login (Operator)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"operator@cargotrace.test\",\n    \"password\": \"password\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["login"]
+						}
+					}
+				},
+				{
+					"name": "Get Authenticated User Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{bearerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/user",
+							"host": ["{{baseUrl}}"],
+							"path": ["user"]
+						}
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{bearerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/logout",
+							"host": ["{{baseUrl}}"],
+							"path": ["logout"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "2. Shipments",
+			"item": [
+				{
+					"name": "Get Shipments (Paginated & Filterable)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{bearerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/shipments?page=1&per_page=10&status=IN_TRANSIT",
+							"host": ["{{baseUrl}}"],
+							"path": ["shipments"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "IN_TRANSIT"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Shipment (Operator/Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{bearerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customer_id\": 3,\n    \"carrier_id\": 1,\n    \"origin_id\": 1,\n    \"destination_id\": 3,\n    \"cargo_type\": \"Precision Medical Sensors\",\n    \"weight\": 2450.50,\n    \"volume\": 12.80,\n    \"expected_departure\": \"2026-11-01 08:00:00\",\n    \"expected_arrival\": \"2026-11-15 18:00:00\",\n    \"notes\": \"Handle with care - fragile electronics\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shipments",
+							"host": ["{{baseUrl}}"],
+							"path": ["shipments"]
+						}
+					}
+				},
+				{
+					"name": "Get Shipment Details by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{bearerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/shipments/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["shipments", "1"]
+						}
+					}
+				},
+				{
+					"name": "Update Shipment",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{bearerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"cargo_type\": \"Precision Medical Sensors (Updated Batch)\",\n    \"notes\": \"Special temperature-controlled container required\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shipments/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["shipments", "1"]
+						}
+					}
+				},
+				{
+					"name": "Delete Shipment (Admin Only)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{bearerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/shipments/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["shipments", "1"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Tracking Timeline",
+			"item": [
+				{
+					"name": "Get Shipment Tracking Timeline",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{bearerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/shipments/1/tracking",
+							"host": ["{{baseUrl}}"],
+							"path": ["shipments", "1", "tracking"]
+						}
+					}
+				},
+				{
+					"name": "Record Tracking Checkpoint (Operator)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{bearerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"IN_TRANSIT\",\n    \"location_id\": 2,\n    \"location_name\": \"PSA Singapore Terminal 5\",\n    \"latitude\": 1.2644,\n    \"longitude\": 103.8228,\n    \"description\": \"Vessel berthed and undergoing transshipment crane operations.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shipments/1/tracking",
+							"host": ["{{baseUrl}}"],
+							"path": ["shipments", "1", "tracking"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "4. Disruption Exceptions",
+			"item": [
+				{
+					"name": "Get Shipment Exceptions",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{bearerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/shipments/1/exceptions",
+							"host": ["{{baseUrl}}"],
+							"path": ["shipments", "1", "exceptions"]
+						}
+					}
+				},
+				{
+					"name": "Flag New Exception (Operator)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{bearerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"exception_type\": \"CUSTOMS_HOLD\",\n    \"severity\": \"HIGH\",\n    \"description\": \"Customs declaration held pending origin certificate verification.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shipments/1/exceptions",
+							"host": ["{{baseUrl}}"],
+							"path": ["shipments", "1", "exceptions"]
+						}
+					}
+				},
+				{
+					"name": "Update Exception Status (Resolve)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{bearerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"RESOLVED\",\n    \"resolution_notes\": \"Origin certificate accepted by customs clearance desk.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/exceptions/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["exceptions", "1"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "5. Carriers & Locations",
+			"item": [
+				{
+					"name": "List Active Carriers",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{bearerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/carriers",
+							"host": ["{{baseUrl}}"],
+							"path": ["carriers"]
+						}
+					}
+				},
+				{
+					"name": "List Geographic Hub Locations",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{bearerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/locations",
+							"host": ["{{baseUrl}}"],
+							"path": ["locations"]
+						}
+					}
+				}
+			]
+		}
+	]
+}
