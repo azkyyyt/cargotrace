@@ -141,6 +141,30 @@
         </div>
     </div>
 
+    <!-- Live Global Fleet Visibility Map (OpenStreetMap + Leaflet.js) -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-3">
+            <div>
+                <div class="flex items-center space-x-2">
+                    <span class="relative flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <h3 class="text-sm font-bold text-slate-900 tracking-tight">Live Fleet Visibility &amp; Global Corridors Map</h3>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5">Real-time OpenStreetMap tracking of active vessels, flights, and maritime shipping lanes (Slide 7 &amp; 9)</p>
+            </div>
+            <div class="flex items-center space-x-3 text-xs">
+                <span class="inline-flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-500 inline-block"></span><span class="text-slate-600 text-[11px]">Normal Vessel</span></span>
+                <span class="inline-flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span><span class="text-slate-600 text-[11px]">Exception / Disruption</span></span>
+                <span class="inline-flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span><span class="text-slate-600 text-[11px]">Delivered</span></span>
+            </div>
+        </div>
+
+        <!-- Leaflet Map Container -->
+        <div id="fleetMap" class="w-full h-96 rounded-xl border border-slate-200 shadow-inner z-10"></div>
+    </div>
+
     <!-- Chart.js Visualizations (Slide 10 & 14) -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Chart 1: Status Distribution -->
@@ -340,6 +364,144 @@
                 }
             }
         });
+
+        // Initialize Live Global Fleet Visibility Map (OpenStreetMap + Leaflet.js)
+        const fleetData = {!! json_encode($activeFleetShipments) !!};
+        const fleetMap = L.map('fleetMap', {
+            zoomControl: true,
+            attributionControl: true
+        }).setView([15, 80], 3);
+
+        // HD Tile Layers: CartoDB Voyager with crisp retina cities, capitals & countries + OSM Standard
+        const voyagerHD = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            subdomains: 'abcd',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        }).addTo(fleetMap);
+
+        const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        });
+
+        // Layer Switcher for HD / Standard
+        L.control.layers({
+            "Carto Voyager HD (Cities & Labels)": voyagerHD,
+            "OpenStreetMap Standard": osmStandard
+        }, null, { position: 'topright' }).addTo(fleetMap);
+
+        const bounds = [];
+        const animatedVessels = [];
+
+        fleetData.forEach(shipment => {
+            // Draw Navigable Maritime Sea Corridor (Glow background + flowing animated dash)
+            if (shipment.corridor && shipment.corridor.length > 1) {
+                const polyColor = shipment.has_exception ? '#ef4444' : (shipment.status === 'DELIVERED' ? '#10b981' : '#0284c7');
+                
+                // Soft glow corridor base line
+                L.polyline(shipment.corridor, {
+                    color: polyColor,
+                    weight: 5,
+                    opacity: 0.35,
+                    lineCap: 'round',
+                    lineJoin: 'round'
+                }).addTo(fleetMap);
+
+                // Animated flowing dashed route (current flow effect)
+                const flowLine = L.polyline(shipment.corridor, {
+                    color: polyColor,
+                    weight: 3,
+                    opacity: 0.9,
+                    dashArray: '8, 12',
+                    className: 'flowing-corridor-dash'
+                }).addTo(fleetMap);
+            }
+
+            // Vessel / Flight Marker with heading rotation and oceanic ripple radar
+            if (shipment.lat && shipment.lng) {
+                bounds.push([shipment.lat, shipment.lng]);
+
+                let pinColor = '#0284c7';
+                let iconSymbol = '🚢';
+                if (shipment.transport_mode === 'AIR') iconSymbol = '✈️';
+                if (shipment.status === 'DELIVERED') pinColor = '#10b981';
+                if (shipment.has_exception) pinColor = '#ef4444';
+
+                const heading = shipment.heading || 0;
+
+                const iconHtml = `
+                    <div style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+                        <!-- Animated oceanic radar pulse -->
+                        <div style="position: absolute; width: 36px; height: 36px; border-radius: 50%; background: ${pinColor}; opacity: 0.25; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+                        <!-- Oriented ship compass card -->
+                        <div style="position: relative; width: 34px; height: 34px; background: ${pinColor}; border: 2.5px solid #ffffff; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; transform: rotate(${heading}deg); transition: transform 0.5s ease;">
+                            <span style="font-size: 15px; display: inline-block; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">${iconSymbol}</span>
+                        </div>
+                        <!-- Bearing arrow indicator -->
+                        <div style="position: absolute; top: 1px; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 7px solid ${pinColor}; transform-origin: center 21px; transform: rotate(${heading}deg);"></div>
+                        <!-- Disruption badge if exception present -->
+                        ${shipment.has_exception ? '<span style="position: absolute; top: 2px; right: 2px; width: 11px; height: 11px; background: #dc2626; border: 2px solid white; border-radius: 50%; z-index: 20;"></span>' : ''}
+                    </div>
+                `;
+
+                const markerIcon = L.divIcon({
+                    html: iconHtml,
+                    className: 'fleet-vessel-marker',
+                    iconSize: [44, 44],
+                    iconAnchor: [22, 22]
+                });
+
+                const m = L.marker([shipment.lat, shipment.lng], { icon: markerIcon }).addTo(fleetMap);
+
+                m.bindPopup(`
+                    <div style="font-family: inherit; font-size: 11px; line-height: 1.5; min-width: 210px;">
+                        <div style="font-weight: 800; color: #0f172a; font-size: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+                            <span>${shipment.number}</span>
+                            <span style="font-size: 9px; font-weight: 600; color: #0284c7; background: #e0f2fe; padding: 1px 5px; border-radius: 4px;">HD Satellite/Voyager</span>
+                        </div>
+                        <div><strong>Carrier:</strong> ${shipment.carrier} (${shipment.transport_mode})</div>
+                        <div><strong>Cargo:</strong> ${shipment.cargo}</div>
+                        <div><strong>Sea Corridor:</strong> ${shipment.origin} &rarr; ${shipment.destination}</div>
+                        <div><strong>Live Position:</strong> ${shipment.current_location}</div>
+                        <div><strong>Navigational Heading:</strong> <span style="font-family: monospace; font-weight: bold; color: #0369a1;">${shipment.heading}&deg; Course</span></div>
+                        <div style="margin-top: 4px;">
+                            <span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; background: ${shipment.has_exception ? '#fee2e2; color: #991b1b;' : (shipment.delay_status === 'DELAYED' ? '#fef3c7; color: #92400e;' : '#dcfce7; color: #166534;')}">
+                                ${shipment.status} &bull; ${shipment.delay_status === 'DELAYED' ? '+' + shipment.delay_hours + 'h' : 'ON TIME'}
+                            </span>
+                        </div>
+                        <div style="margin-top: 6px; text-align: right;">
+                            <a href="/shipments/${shipment.id}" style="color: #0284c7; font-weight: bold; text-decoration: underline;">Open Timeline &rarr;</a>
+                        </div>
+                    </div>
+                `);
+
+                // Register for subtle drift animation (oceanic motion simulation)
+                if (shipment.status === 'IN_TRANSIT' && shipment.corridor && shipment.corridor.length > 1) {
+                    animatedVessels.push({
+                        marker: m,
+                        baseLat: shipment.lat,
+                        baseLng: shipment.lng,
+                        heading: heading,
+                        phase: Math.random() * Math.PI * 2
+                    });
+                }
+            }
+        });
+
+        // Subtle realistic current motion drift simulation (vessel engine pulsation & wave drift)
+        let waveClock = 0;
+        setInterval(() => {
+            waveClock += 0.08;
+            animatedVessels.forEach(v => {
+                const latOffset = Math.sin(waveClock + v.phase) * 0.015;
+                const lngOffset = Math.cos(waveClock + v.phase) * 0.015;
+                v.marker.setLatLng([v.baseLat + latOffset, v.baseLng + lngOffset]);
+            });
+        }, 300);
+
+        if (bounds.length > 0) {
+            fleetMap.fitBounds(bounds, { padding: [50, 50] });
+        }
     });
 </script>
 @endpush

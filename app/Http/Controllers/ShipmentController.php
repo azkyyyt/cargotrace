@@ -7,6 +7,7 @@ use App\Models\Location;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Services\ExternalApiService;
+use App\Services\SeaRouteService;
 use App\Services\ShipmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -117,6 +118,50 @@ class ShipmentController extends Controller
             ];
         }
 
+        // Predefined Realistic Corridor Polyline
+        $originCode = $shipment->origin?->code ?? '';
+        $destCode = $shipment->destination?->code ?? '';
+        $corridorPath = SeaRouteService::getRoute($originCode, $destCode);
+
+        // Current active vessel position & bearing
+        $latestEvent = $shipment->trackingEvents->whereNotNull('latitude')->whereNotNull('longitude')->last();
+        $currentLat = $latestEvent ? (float) $latestEvent->latitude : (float) ($shipment->origin?->latitude ?? 0);
+        $currentLng = $latestEvent ? (float) $latestEvent->longitude : (float) ($shipment->origin?->longitude ?? 0);
+        $currentLocationName = $latestEvent ? $latestEvent->location_name : ($shipment->origin?->name ?? 'Origin Hub');
+
+        $vesselHeading = 90;
+        if (!empty($corridorPath) && count($corridorPath) > 1) {
+            $closestIdx = 0;
+            $minDist = PHP_FLOAT_MAX;
+            foreach ($corridorPath as $idx => $wpt) {
+                $d = hypot($wpt[0] - $currentLat, $wpt[1] - $currentLng);
+                if ($d < $minDist) {
+                    $minDist = $d;
+                    $closestIdx = $idx;
+                }
+            }
+            $nextIdx = min(count($corridorPath) - 1, $closestIdx + 1);
+            if ($closestIdx !== $nextIdx) {
+                $vesselHeading = SeaRouteService::calculateBearing(
+                    $currentLat,
+                    $currentLng,
+                    $corridorPath[$nextIdx][0],
+                    $corridorPath[$nextIdx][1]
+                );
+            }
+        }
+
+        $vesselInfo = [
+            'lat' => $currentLat,
+            'lng' => $currentLng,
+            'name' => $currentLocationName,
+            'heading' => round($vesselHeading, 1),
+            'status' => $shipment->current_status,
+            'transport_mode' => $shipment->carrier?->transport_mode ?? 'SEA',
+            'carrier_name' => $shipment->carrier?->name ?? 'Carrier',
+            'has_exception' => $shipment->exceptions->where('status', '!=', 'RESOLVED')->count() > 0,
+        ];
+
         $carriers = Carrier::where('is_active', true)->get();
         $locations = Location::all();
 
@@ -125,6 +170,8 @@ class ShipmentController extends Controller
             'originWeather',
             'destinationWeather',
             'mapPoints',
+            'corridorPath',
+            'vesselInfo',
             'carriers',
             'locations'
         ));

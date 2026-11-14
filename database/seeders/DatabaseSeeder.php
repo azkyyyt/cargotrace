@@ -246,14 +246,14 @@ class DatabaseSeeder extends Seeder
             ],
         ]);
 
-        // Historical tracking events for S1
-        $t1 = $s1->trackingEvents()->create([
+        // Realistic Maritime Sea Route: Jakarta -> Sunda Strait -> Singapore -> Malacca Strait -> Indian Ocean -> Red Sea -> Suez Canal -> Mediterranean -> Gibraltar -> English Channel -> Rotterdam
+        $s1->trackingEvents()->create([
             'event_type' => 'STATUS_UPDATE',
             'status' => 'CREATED',
             'location_id' => $locationModels['IDTPP']->id,
             'location_name' => $locationModels['IDTPP']->name,
-            'latitude' => $locationModels['IDTPP']->latitude,
-            'longitude' => $locationModels['IDTPP']->longitude,
+            'latitude' => -6.1038,
+            'longitude' => 106.8837,
             'description' => 'Shipment booking registered in system.',
             'event_time' => $s1Departure->copy()->subDays(2),
             'created_by' => $operator->id,
@@ -263,10 +263,10 @@ class DatabaseSeeder extends Seeder
             'event_type' => 'CHECKPOINT',
             'status' => 'PICKED_UP',
             'location_id' => $locationModels['IDTPP']->id,
-            'location_name' => $locationModels['IDTPP']->name,
-            'latitude' => $locationModels['IDTPP']->latitude,
-            'longitude' => $locationModels['IDTPP']->longitude,
-            'description' => 'Cargo received and container sealed at Tanjung Priok terminal.',
+            'location_name' => 'Tanjung Priok Container Terminal 3',
+            'latitude' => -5.9800,
+            'longitude' => 106.8800,
+            'description' => 'Cargo received and container sealed on vessel MV Maersk Mc-Kinney Moller.',
             'event_time' => $s1Departure,
             'created_by' => $operator->id,
         ]);
@@ -274,11 +274,23 @@ class DatabaseSeeder extends Seeder
         $s1->trackingEvents()->create([
             'event_type' => 'CHECKPOINT',
             'status' => 'IN_TRANSIT',
+            'location_id' => null,
+            'location_name' => 'Sunda Strait Sea Corridor',
+            'latitude' => -5.9200,
+            'longitude' => 105.8500,
+            'description' => 'Vessel exited Sunda Strait heading northwest towards Singapore Strait.',
+            'event_time' => $s1Departure->copy()->addHours(14),
+            'created_by' => $operator->id,
+        ]);
+
+        $s1->trackingEvents()->create([
+            'event_type' => 'CHECKPOINT',
+            'status' => 'IN_TRANSIT',
             'location_id' => $locationModels['SGSIN']->id,
-            'location_name' => $locationModels['SGSIN']->name,
-            'latitude' => $locationModels['SGSIN']->latitude,
-            'longitude' => $locationModels['SGSIN']->longitude,
-            'description' => 'Arrived at Port of Singapore for transshipment sorting.',
+            'location_name' => 'Port of Singapore (Pasir Panjang)',
+            'latitude' => 1.2750,
+            'longitude' => 103.7800,
+            'description' => 'Vessel docked for scheduled feeder container transfers.',
             'event_time' => $s1Departure->copy()->addDays(2),
             'created_by' => $operator->id,
         ]);
@@ -287,9 +299,9 @@ class DatabaseSeeder extends Seeder
             'event_type' => 'EXCEPTION_FLAG',
             'status' => 'IN_TRANSIT',
             'location_id' => $locationModels['SGSIN']->id,
-            'location_name' => $locationModels['SGSIN']->name,
-            'latitude' => $locationModels['SGSIN']->latitude,
-            'longitude' => $locationModels['SGSIN']->longitude,
+            'location_name' => 'Singapore Customs Anchorage East',
+            'latitude' => 1.2400,
+            'longitude' => 103.8800,
             'description' => '[EXCEPTION: CUSTOMS_HOLD] Declaration discrepancy on lithium battery documentation.',
             'event_time' => $now->copy()->subHours(18),
             'created_by' => $operator->id,
@@ -305,6 +317,18 @@ class DatabaseSeeder extends Seeder
             'resolution_notes' => 'Forwarder requested revised MSDS from manufacturer; awaiting validation.',
         ]);
 
+        $s1->trackingEvents()->create([
+            'event_type' => 'CHECKPOINT',
+            'status' => 'IN_TRANSIT',
+            'location_id' => null,
+            'location_name' => 'Malacca Strait Sea Lane (Underway)',
+            'latitude' => 2.8500,
+            'longitude' => 101.2000,
+            'description' => 'Documentation cleared for transit; vessel steaming speed 19.4 knots heading to Indian Ocean.',
+            'event_time' => $now->copy()->subHours(3),
+            'created_by' => $operator->id,
+        ]);
+
         // Scenario 2: Group B (Asia -> North America: Shanghai to Los Angeles) - Weather Delay
         $s2Departure = $now->copy()->subDays(4);
         $s2ExpectedArrival = $now->copy()->addDays(8);
@@ -316,7 +340,7 @@ class DatabaseSeeder extends Seeder
             'carrier_id' => $carrierModels['EVG']->id,
             'origin_id' => $locationModels['CNSHG']->id,
             'destination_id' => $locationModels['USLAX']->id,
-            'current_location_id' => $locationModels['CNSHG']->id,
+            'current_location_id' => null,
             'cargo_type' => 'Industrial Solar Panels & Inverters',
             'weight' => 24800.00,
             'volume' => 78.00,
@@ -346,34 +370,58 @@ class DatabaseSeeder extends Seeder
             'status' => 'CREATED',
             'location_id' => $locationModels['CNSHG']->id,
             'location_name' => $locationModels['CNSHG']->name,
-            'latitude' => $locationModels['CNSHG']->latitude,
-            'longitude' => $locationModels['CNSHG']->longitude,
-            'description' => 'Consignment booked with carrier Evergreen.',
+            'latitude' => 30.6274,
+            'longitude' => 122.0642,
+            'description' => 'Consignment booked with carrier Evergreen Marine Corp.',
             'event_time' => $s2Departure->copy()->subDays(1),
             'created_by' => $operator->id,
         ]);
 
         $s2->trackingEvents()->create([
             'event_type' => 'CHECKPOINT',
-            'status' => 'IN_TRANSIT',
+            'status' => 'PICKED_UP',
             'location_id' => $locationModels['CNSHG']->id,
-            'location_name' => $locationModels['CNSHG']->name,
-            'latitude' => $locationModels['CNSHG']->latitude,
-            'longitude' => $locationModels['CNSHG']->longitude,
-            'description' => 'Vessel departed Yangshan Deepwater terminal heading Transpacific.',
+            'location_name' => 'Shanghai Yangshan Deepwater Terminal Phase 4',
+            'latitude' => 30.6274,
+            'longitude' => 122.0642,
+            'description' => 'Loaded aboard MV Ever Given for Pacific Trans-load route.',
             'event_time' => $s2Departure,
+            'created_by' => $operator->id,
+        ]);
+
+        $s2->trackingEvents()->create([
+            'event_type' => 'CHECKPOINT',
+            'status' => 'IN_TRANSIT',
+            'location_id' => null,
+            'location_name' => 'East China Sea - Osumi Strait Corridor',
+            'latitude' => 30.5000,
+            'longitude' => 130.5000,
+            'description' => 'Navigating through Osumi Strait, entered open North Pacific shipping fairway.',
+            'event_time' => $s2Departure->copy()->addDays(1),
+            'created_by' => $operator->id,
+        ]);
+
+        $s2->trackingEvents()->create([
+            'event_type' => 'CHECKPOINT',
+            'status' => 'IN_TRANSIT',
+            'location_id' => null,
+            'location_name' => 'North Pacific Great Circle Waypoint Alpha',
+            'latitude' => 38.5000,
+            'longitude' => 155.0000,
+            'description' => 'Steaming at 20.8 knots heading towards International Date Line.',
+            'event_time' => $s2Departure->copy()->addDays(2)->addHours(12),
             'created_by' => $operator->id,
         ]);
 
         $s2ExEvent = $s2->trackingEvents()->create([
             'event_type' => 'EXCEPTION_FLAG',
             'status' => 'IN_TRANSIT',
-            'location_id' => $locationModels['CNSHG']->id,
-            'location_name' => 'North Pacific Zone 4',
-            'latitude' => 32.5,
-            'longitude' => 145.0,
-            'description' => '[EXCEPTION: WEATHER_DELAY] Routing deviation due to adverse typhoon wake.',
-            'event_time' => $now->copy()->subHours(8),
+            'location_id' => null,
+            'location_name' => 'North Pacific Oceanic Storm Front (Mid-Pacific)',
+            'latitude' => 41.5000,
+            'longitude' => 178.0000,
+            'description' => '[EXCEPTION: WEATHER_DELAY] Severe oceanic gale and 7-meter swells. Speed reduced to 11.2 knots for container safety.',
+            'event_time' => $now->copy()->subHours(6),
             'created_by' => $operator->id,
         ]);
 
@@ -382,8 +430,8 @@ class DatabaseSeeder extends Seeder
             'exception_type' => ShipmentException::TYPE_WEATHER_DELAY,
             'severity' => 'MEDIUM',
             'status' => ShipmentException::STATUS_OPEN,
-            'description' => 'Heavy sea state causing vessel detour of 180 nautical miles.',
-            'detected_at' => $now->copy()->subHours(8),
+            'description' => 'Gale-force headwinds in mid-Pacific causing 14h ETA slip to Port of Los Angeles.',
+            'detected_at' => $now->copy()->subHours(6),
         ]);
 
         // Scenario 3: Group C (Southeast Asia -> Australia: Jakarta to Sydney) - On-Time & Delivered!
@@ -427,9 +475,9 @@ class DatabaseSeeder extends Seeder
             'status' => 'PICKED_UP',
             'location_id' => $locationModels['IDTPP']->id,
             'location_name' => $locationModels['IDTPP']->name,
-            'latitude' => $locationModels['IDTPP']->latitude,
-            'longitude' => $locationModels['IDTPP']->longitude,
-            'description' => 'Container sealed at origin farm warehouse.',
+            'latitude' => -6.1038,
+            'longitude' => 106.8837,
+            'description' => 'Container sealed at origin export facility.',
             'event_time' => $s3Departure,
             'created_by' => $operator->id,
         ]);
@@ -437,11 +485,35 @@ class DatabaseSeeder extends Seeder
         $s3->trackingEvents()->create([
             'event_type' => 'CHECKPOINT',
             'status' => 'IN_TRANSIT',
+            'location_id' => null,
+            'location_name' => 'Lombok Strait Maritime Passage',
+            'latitude' => -8.7500,
+            'longitude' => 115.3000,
+            'description' => 'Transited Lombok Strait safely into southern Indian Ocean.',
+            'event_time' => $s3Departure->copy()->addDays(2),
+            'created_by' => $operator->id,
+        ]);
+
+        $s3->trackingEvents()->create([
+            'event_type' => 'CHECKPOINT',
+            'status' => 'IN_TRANSIT',
+            'location_id' => null,
+            'location_name' => 'Coral Sea Maritime Lane',
+            'latitude' => -16.0000,
+            'longitude' => 146.5000,
+            'description' => 'Cruising eastern Australian seaboard under clear weather conditions.',
+            'event_time' => $s3Departure->copy()->addDays(7),
+            'created_by' => $operator->id,
+        ]);
+
+        $s3->trackingEvents()->create([
+            'event_type' => 'CHECKPOINT',
+            'status' => 'IN_TRANSIT',
             'location_id' => $locationModels['AUSYD']->id,
-            'location_name' => $locationModels['AUSYD']->name,
-            'latitude' => $locationModels['AUSYD']->latitude,
-            'longitude' => $locationModels['AUSYD']->longitude,
-            'description' => 'Vessel berthed at Port Botany, customs cleared.',
+            'location_name' => 'Port Botany Sydney Terminal 3',
+            'latitude' => -33.9500,
+            'longitude' => 151.2200,
+            'description' => 'Vessel berthed at Port Botany, discharge operations commenced.',
             'event_time' => $s3ExpectedArrival->copy()->subHours(8),
             'created_by' => $operator->id,
         ]);
@@ -450,10 +522,10 @@ class DatabaseSeeder extends Seeder
             'event_type' => 'CHECKPOINT',
             'status' => 'DELIVERED',
             'location_id' => $locationModels['AUSYD']->id,
-            'location_name' => $locationModels['AUSYD']->name,
-            'latitude' => $locationModels['AUSYD']->latitude,
-            'longitude' => $locationModels['AUSYD']->longitude,
-            'description' => 'Consignment signed and received by Sydney Roasting Co.',
+            'location_name' => 'Sydney Central Roastery Distribution Hub',
+            'latitude' => -33.8688,
+            'longitude' => 151.2093,
+            'description' => 'Consignment signed and received in good condition by Sydney Roasting Co.',
             'event_time' => $s3ExpectedArrival->copy()->subHours(4),
             'created_by' => $operator->id,
         ]);

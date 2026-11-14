@@ -65,15 +65,6 @@
                         </div>
                         <span class="text-xl font-extrabold tracking-tight text-white">Cargo<span class="text-sky-400">Trace</span></span>
                     </a>
-                    <span class="hidden lg:inline-block text-xs bg-sky-950 text-sky-300 font-semibold px-2 py-0.5 rounded border border-sky-800">UAS Web Programming 2</span>
-                </div>
-
-                <!-- Center: Quick Examiner Demo Switcher -->
-                <div class="hidden md:flex items-center space-x-2 text-xs">
-                    <span class="text-slate-400">Quick Switch:</span>
-                    <a href="{{ route('demo.login', 'admin') }}" class="px-2.5 py-1 rounded font-medium {{ Auth::check() && Auth::user()->isAdmin() ? 'bg-amber-500 text-slate-900 font-bold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700' }}">Admin</a>
-                    <a href="{{ route('demo.login', 'operator') }}" class="px-2.5 py-1 rounded font-medium {{ Auth::check() && Auth::user()->isOperator() ? 'bg-blue-500 text-white font-bold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700' }}">Operator</a>
-                    <a href="{{ route('demo.login', 'customer') }}" class="px-2.5 py-1 rounded font-medium {{ Auth::check() && Auth::user()->isCustomer() ? 'bg-emerald-500 text-white font-bold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700' }}">Customer</a>
                 </div>
 
                 <!-- Right: Notifications & User Profile -->
@@ -256,7 +247,7 @@
     <footer class="bg-white border-t border-slate-200 py-4 mt-auto text-center text-xs text-slate-500">
         <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
             <div>
-                <strong>CargoTrace</strong> &copy; 2026 &bull; Web Programming 2 Final Project (UAS)
+                <strong>CargoTrace</strong> &copy; 2026 &bull; Global Shipment Visibility &amp; Tracking Platform
             </div>
             <div>
                 Built with Laravel 11, Tailwind CSS, Leaflet.js, OpenStreetMap, Open-Meteo, &amp; Chart.js

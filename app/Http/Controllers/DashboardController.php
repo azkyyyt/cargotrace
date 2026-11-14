@@ -6,6 +6,7 @@ use App\Models\Carrier;
 use App\Models\Shipment;
 use App\Models\ShipmentException;
 use App\Models\TrackingEvent;
+use App\Services\SeaRouteService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -100,6 +101,95 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
+        // Active Global Fleet Waypoints & Transit Corridors for Real-Time Map
+        $activeFleetShipments = (clone $shipmentQuery)
+            ->with(['carrier', 'origin', 'destination', 'currentLocation', 'trackingEvents.location', 'exceptions'])
+            ->get()
+            ->map(function ($s) {
+                // Determine current coordinates
+                $lat = $s->origin?->latitude ?? 0;
+                $lng = $s->origin?->longitude ?? 0;
+                $locationName = $s->origin?->name ?? 'Origin Hub';
+                
+                $latestEvent = $s->trackingEvents->whereNotNull('latitude')->whereNotNull('longitude')->last();
+                if ($latestEvent) {
+                    $lat = (float) $latestEvent->latitude;
+                    $lng = (float) $latestEvent->longitude;
+                    $locationName = $latestEvent->location_name;
+                } elseif ($s->currentLocation) {
+                    $lat = (float) $s->currentLocation->latitude;
+                    $lng = (float) $s->currentLocation->longitude;
+                    $locationName = $s->currentLocation->name;
+                }
+
+                // Collect trajectory waypoints
+                $corridor = [];
+                $originCode = $s->origin?->code ?? '';
+                $destCode = $s->destination?->code ?? '';
+                $predefinedRoute = SeaRouteService::getRoute($originCode, $destCode);
+
+                if (!empty($predefinedRoute)) {
+                    foreach ($predefinedRoute as $pt) {
+                        $corridor[] = [$pt[0], $pt[1]];
+                    }
+                } else {
+                    if ($s->origin) {
+                        $corridor[] = [(float) $s->origin->latitude, (float) $s->origin->longitude];
+                    }
+                    foreach ($s->trackingEvents as $te) {
+                        if ($te->latitude && $te->longitude) {
+                            $corridor[] = [(float) $te->latitude, (float) $te->longitude];
+                        }
+                    }
+                    if ($s->destination) {
+                        $corridor[] = [(float) $s->destination->latitude, (float) $s->destination->longitude];
+                    }
+                }
+
+                // Compute heading bearing towards next waypoint if in transit
+                $heading = 90; // Default East
+                if (count($corridor) > 1) {
+                    $closestIdx = 0;
+                    $minDist = PHP_FLOAT_MAX;
+                    foreach ($corridor as $idx => $wpt) {
+                        $d = hypot($wpt[0] - $lat, $wpt[1] - $lng);
+                        if ($d < $minDist) {
+                            $minDist = $d;
+                            $closestIdx = $idx;
+                        }
+                    }
+                    $nextIdx = min(count($corridor) - 1, $closestIdx + 1);
+                    if ($closestIdx !== $nextIdx) {
+                        $heading = SeaRouteService::calculateBearing(
+                            $lat,
+                            $lng,
+                            $corridor[$nextIdx][0],
+                            $corridor[$nextIdx][1]
+                        );
+                    }
+                }
+
+                return [
+                    'id' => $s->id,
+                    'number' => $s->shipment_number,
+                    'status' => $s->current_status,
+                    'carrier' => $s->carrier?->name ?? 'Carrier',
+                    'transport_mode' => $s->carrier?->transport_mode ?? 'SEA',
+                    'cargo' => $s->cargo_type,
+                    'origin' => $s->origin?->city . ' (' . $s->origin?->country . ')',
+                    'destination' => $s->destination?->city . ' (' . $s->destination?->country . ')',
+                    'current_location' => $locationName,
+                    'lat' => $lat,
+                    'lng' => $lng,
+                    'heading' => round($heading, 1),
+                    'delay_status' => $s->delay_status,
+                    'delay_hours' => $s->delay_duration_hours,
+                    'delay_severity' => $s->delay_severity,
+                    'has_exception' => $s->exceptions->where('status', '!=', 'RESOLVED')->count() > 0,
+                    'corridor' => $corridor,
+                ];
+            });
+
         return view('dashboard.index', compact(
             'totalShipments',
             'inTransitCount',
@@ -118,7 +208,8 @@ class DashboardController extends Controller
             'exceptionTypeCounts',
             'recentShipments',
             'recentEvents',
-            'activeExceptions'
+            'activeExceptions',
+            'activeFleetShipments'
         ));
     }
 }

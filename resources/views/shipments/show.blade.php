@@ -507,34 +507,77 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const points = {!! json_encode($mapPoints) !!};
+        const corridor = {!! json_encode($corridorPath ?? []) !!};
+        const vessel = {!! json_encode($vesselInfo ?? null) !!};
 
-        if (points.length === 0) {
+        if (points.length === 0 && corridor.length === 0) {
             document.getElementById('shipmentMap').innerHTML = '<div class="h-full flex items-center justify-center text-slate-400 text-xs">No GPS coordinates available for this lane.</div>';
             return;
         }
 
-        // Initialize Leaflet map centered at first point
-        const map = L.map('shipmentMap').setView([points[0].lat, points[0].lng], 4);
+        const initialLat = vessel ? vessel.lat : (points[0] ? points[0].lat : 15);
+        const initialLng = vessel ? vessel.lng : (points[0] ? points[0].lng : 80);
 
-        // Standard OpenStreetMap tiles with attribution (Slide 9 compliance)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        // Initialize Leaflet map
+        const map = L.map('shipmentMap', {
+            zoomControl: true,
+            attributionControl: true
+        }).setView([initialLat, initialLng], 4);
+
+        // HD Tile Layers: CartoDB Voyager with crisp retina cities, capitals & countries + OSM Standard
+        const voyagerHD = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            subdomains: 'abcd',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         }).addTo(map);
 
-        const latLngs = [];
+        const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        });
 
+        // Layer Switcher for HD / Standard
+        L.control.layers({
+            "Carto Voyager HD (Cities & Labels)": voyagerHD,
+            "OpenStreetMap Standard": osmStandard
+        }, null, { position: 'topright' }).addTo(map);
+
+        const bounds = [];
+
+        // 1. Draw Navigable Sea Lane Corridor
+        if (corridor && corridor.length > 1) {
+            const corridorLatLngs = corridor.map(c => [c[0], c[1]]);
+            corridorLatLngs.forEach(c => bounds.push(c));
+
+            // Soft glowing maritime fairway
+            L.polyline(corridorLatLngs, {
+                color: '#0284c7',
+                weight: 6,
+                opacity: 0.3,
+                lineCap: 'round',
+                lineJoin: 'round'
+            }).addTo(map);
+
+            // Flowing nautical dash line
+            L.polyline(corridorLatLngs, {
+                color: '#0284c7',
+                weight: 3,
+                opacity: 0.85,
+                dashArray: '8, 12'
+            }).addTo(map);
+        }
+
+        // 2. Draw Checkpoints and Ports
         points.forEach((pt, index) => {
-            latLngs.push([pt.lat, pt.lng]);
+            bounds.push([pt.lat, pt.lng]);
 
-            // Custom color icon
-            let markerColor = '#0284c7'; // Blue
+            let markerColor = '#0284c7';
             if (pt.type === 'origin') markerColor = '#2563eb';
-            if (pt.type === 'destination') markerColor = '#10b981'; // Green
-            if (pt.type === 'exception') markerColor = '#ef4444'; // Red
+            if (pt.type === 'destination') markerColor = '#10b981';
+            if (pt.type === 'exception') markerColor = '#ef4444';
 
             const markerHtml = `
-                <div style="background-color: ${markerColor}; width: 14px; height: 14px; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>
+                <div style="background-color: ${markerColor}; width: 14px; height: 14px; border: 2.5px solid #ffffff; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.35);"></div>
             `;
             const customIcon = L.divIcon({
                 html: markerHtml,
@@ -553,23 +596,62 @@
                     <span style="color: #0284c7; font-weight: bold;">${pt.time}</span>
                 </div>
             `);
-
-            // Open popup for latest point or destination
-            if (index === points.length - 1) {
-                marker.openPopup();
-            }
         });
 
-        // Draw connecting polyline path
-        if (latLngs.length > 1) {
-            L.polyline(latLngs, {
-                color: '#0284c7',
-                weight: 3,
-                opacity: 0.8,
-                dashArray: '6, 6'
-            }).addTo(map);
+        // 3. Draw Active Vessel / Flight Marker with Real Heading & Oceanic Pulse
+        if (vessel && vessel.lat && vessel.lng) {
+            bounds.push([vessel.lat, vessel.lng]);
 
-            map.fitBounds(latLngs, { padding: [40, 40] });
+            let iconSymbol = vessel.transport_mode === 'AIR' ? '✈️' : '🚢';
+            let pinColor = vessel.has_exception ? '#ef4444' : (vessel.status === 'DELIVERED' ? '#10b981' : '#0284c7');
+            let heading = vessel.heading || 0;
+
+            const vesselHtml = `
+                <div style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+                    <div style="position: absolute; width: 38px; height: 38px; border-radius: 50%; background: ${pinColor}; opacity: 0.3; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+                    <div style="position: relative; width: 34px; height: 34px; background: ${pinColor}; border: 2.5px solid #ffffff; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; transform: rotate(${heading}deg); transition: transform 0.5s ease;">
+                        <span style="font-size: 15px; display: inline-block;">${iconSymbol}</span>
+                    </div>
+                    <div style="position: absolute; top: 1px; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 7px solid ${pinColor}; transform-origin: center 21px; transform: rotate(${heading}deg);"></div>
+                    ${vessel.has_exception ? '<span style="position: absolute; top: 2px; right: 2px; width: 11px; height: 11px; background: #dc2626; border: 2px solid white; border-radius: 50%; z-index: 20;"></span>' : ''}
+                </div>
+            `;
+
+            const vesselIcon = L.divIcon({
+                html: vesselHtml,
+                className: 'vessel-heading-pin',
+                iconSize: [44, 44],
+                iconAnchor: [22, 22]
+            });
+
+            const vesselMarker = L.marker([vessel.lat, vessel.lng], { icon: vesselIcon, zIndexOffset: 1000 }).addTo(map);
+
+            vesselMarker.bindPopup(`
+                <div style="font-family: inherit; font-size: 11px; line-height: 1.5; min-width: 190px;">
+                    <div style="font-weight: 800; color: #0f172a; font-size: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 3px;">
+                        Live Vessel Position
+                    </div>
+                    <div><strong>Carrier:</strong> ${vessel.carrier_name}</div>
+                    <div><strong>Current Location:</strong> ${vessel.name}</div>
+                    <div><strong>Course / Heading:</strong> <span style="font-family: monospace; font-weight: bold; color: #0284c7;">${vessel.heading}&deg; Course</span></div>
+                    <div><strong>Status:</strong> <span style="font-weight: bold; color: ${pinColor};">${vessel.status}</span></div>
+                </div>
+            `).openPopup();
+
+            // Subtle live engine vibration / wave drift animation
+            if (vessel.status === 'IN_TRANSIT') {
+                let driftClock = 0;
+                setInterval(() => {
+                    driftClock += 0.1;
+                    const latDrift = Math.sin(driftClock) * 0.012;
+                    const lngDrift = Math.cos(driftClock) * 0.012;
+                    vesselMarker.setLatLng([vessel.lat + latDrift, vessel.lng + lngDrift]);
+                }, 300);
+            }
+        }
+
+        if (bounds.length > 0) {
+            map.fitBounds(bounds, { padding: [50, 50] });
         }
     });
 </script>
