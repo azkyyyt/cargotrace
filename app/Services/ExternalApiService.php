@@ -8,6 +8,135 @@ use Illuminate\Support\Facades\Log;
 class ExternalApiService
 {
     /**
+     * Search places and geocode locations like Google Maps Places.
+     * Checks Google Maps Geocoding if API key is provided, 
+     * otherwise uses high-speed Photon & Nominatim geocoding services.
+     */
+    public function searchPlaces(string $query, int $limit = 6): array
+    {
+        $query = trim($query);
+        if (strlen($query) < 2) {
+            return [];
+        }
+
+        $results = [];
+
+        // 1. If Google Maps API Key is provided, use Google Maps Geocoding API
+        $googleKey = config('services.google_maps.key', env('GOOGLE_MAPS_API_KEY'));
+        if (!empty($googleKey)) {
+            try {
+                $response = Http::withoutVerifying()->timeout(4)->get('https://maps.googleapis.com/maps/api/geocode/json', [
+                    'address' => $query,
+                    'key' => $googleKey,
+                ]);
+                if ($response->successful()) {
+                    $data = $response->json();
+                    if (($data['status'] ?? '') === 'OK' && !empty($data['results'])) {
+                        foreach (array_slice($data['results'], 0, $limit) as $item) {
+                            $components = $item['address_components'] ?? [];
+                            $city = '';
+                            $country = '';
+                            foreach ($components as $c) {
+                                if (in_array('locality', $c['types'] ?? [])) $city = $c['long_name'];
+                                if (empty($city) && in_array('administrative_area_level_2', $c['types'] ?? [])) $city = $c['long_name'];
+                                if (in_array('country', $c['types'] ?? [])) $country = $c['long_name'];
+                            }
+
+                            $results[] = [
+                                'name' => $item['address_components'][0]['long_name'] ?? ($item['formatted_address'] ?? $query),
+                                'city' => $city ?: ($item['address_components'][0]['short_name'] ?? 'City'),
+                                'country' => $country ?: 'Global',
+                                'latitude' => (float) ($item['geometry']['location']['lat'] ?? 0),
+                                'longitude' => (float) ($item['geometry']['location']['lng'] ?? 0),
+                                'address' => $item['formatted_address'] ?? '',
+                                'source' => 'Google Maps API',
+                            ];
+                        }
+                        if (!empty($results)) {
+                            return $results;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("Google Maps Geocoding error: " . $e->getMessage());
+            }
+        }
+
+        // 2. High-speed Photon Geocoding Service (OpenStreetMap data, instant autocomplete, zero key needed)
+        try {
+            $response = Http::withoutVerifying()
+                ->timeout(4)
+                ->withHeaders(['User-Agent' => 'CargoTrace-Platform/1.0'])
+                ->get('https://photon.komoot.io/api/', [
+                    'q' => $query,
+                    'limit' => $limit,
+                ]);
+            if ($response->successful()) {
+                $data = $response->json();
+                foreach ($data['features'] ?? [] as $f) {
+                    $p = $f['properties'] ?? [];
+                    $coords = $f['geometry']['coordinates'] ?? [0, 0];
+                    $name = $p['name'] ?? $query;
+                    $city = $p['city'] ?? ($p['district'] ?? ($p['state'] ?? ''));
+                    $country = $p['country'] ?? '';
+                    $addressParts = array_filter([$name, $city, $p['state'] ?? null, $country]);
+
+                    $results[] = [
+                        'name' => $name,
+                        'city' => $city ?: $name,
+                        'country' => $country ?: 'Global',
+                        'latitude' => round((float) $coords[1], 6),
+                        'longitude' => round((float) $coords[0], 6),
+                        'address' => implode(', ', $addressParts),
+                        'source' => 'OpenStreetMap Photon Engine',
+                    ];
+                }
+                if (!empty($results)) {
+                    return $results;
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning("Photon Geocoding error: " . $e->getMessage());
+        }
+
+        // 3. Fallback to standard Nominatim Search
+        try {
+            $response = Http::withoutVerifying()
+                ->timeout(4)
+                ->withHeaders(['User-Agent' => 'CargoTrace-Platform/1.0 (contact@cargotrace.test)'])
+                ->get('https://nominatim.openstreetmap.org/search', [
+                    'q' => $query,
+                    'format' => 'json',
+                    'addressdetails' => 1,
+                    'limit' => $limit,
+                ]);
+            if ($response->successful()) {
+                $data = $response->json();
+                foreach ($data as $item) {
+                    $addr = $item['address'] ?? [];
+                    $city = $addr['city'] ?? ($addr['town'] ?? ($addr['county'] ?? ($addr['state'] ?? '')));
+                    $country = $addr['country'] ?? '';
+                    $name = $item['name'] ?? ($item['display_name'] ?? $query);
+
+                    $results[] = [
+                        'name' => $name,
+                        'city' => $city ?: $name,
+                        'country' => $country ?: 'Global',
+                        'latitude' => round((float) $item['lat'], 6),
+                        'longitude' => round((float) $item['lon'], 6),
+                        'address' => $item['display_name'] ?? '',
+                        'source' => 'OpenStreetMap Nominatim',
+                    ];
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning("Nominatim search error: " . $e->getMessage());
+        }
+
+        return $results;
+    }
+
+    /**
      * Geocode an address/location query using OpenStreetMap Nominatim.
      * Handles timeouts, errors, and empty responses gracefully.
      */
@@ -16,7 +145,8 @@ class ExternalApiService
         $baseUrl = config('services.geocoding.url', env('GEOCODING_API_URL', 'https://nominatim.openstreetmap.org'));
 
         try {
-            $response = Http::timeout(4)
+            $response = Http::withoutVerifying()
+                ->timeout(4)
                 ->withHeaders([
                     'User-Agent' => 'CargoTrace-Platform/1.0 (contact@cargotrace.test)'
                 ])
@@ -62,7 +192,7 @@ class ExternalApiService
         $baseUrl = config('services.weather.url', env('WEATHER_API_URL', 'https://api.open-meteo.com/v1/forecast'));
 
         try {
-            $response = Http::timeout(4)->get($baseUrl, [
+            $response = Http::withoutVerifying()->timeout(4)->get($baseUrl, [
                 'latitude' => $lat,
                 'longitude' => $lon,
                 'current_weather' => 'true',

@@ -145,4 +145,12 @@ class ApiEndpointsTest extends TestCase
                 ]
             ]);
     }
+
+    public function test_authenticated_user_can_search_locations_autocomplete(): void
+    {
+        $response = $this->actingAs($this->operator)->getJson(route('locations.search', ['q' => 'Medan']));
+
+        $response->assertStatus(200);
+        $this->assertIsArray($response->json());
+    }
 }

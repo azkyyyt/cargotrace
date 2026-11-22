@@ -12,6 +12,35 @@
     selectedTargetStatus: '',
     selectedBank: 'BCA',
     qrisTimer: '14:59',
+    cpSearchQuery: '',
+    cpResults: [],
+    cpSearching: false,
+    cpLocationName: '',
+    cpLat: '',
+    cpLng: '',
+    async doCpSearch() {
+        const q = this.cpSearchQuery.trim();
+        if (q.length < 2) {
+            this.cpResults = [];
+            return;
+        }
+        this.cpSearching = true;
+        try {
+            const res = await fetch(`/locations/search?q=${encodeURIComponent(q)}`);
+            this.cpResults = await res.json();
+        } catch(e) {
+            console.error(e);
+        } finally {
+            this.cpSearching = false;
+        }
+    },
+    selectCpPlace(item) {
+        this.cpSearchQuery = item.name;
+        this.cpLocationName = item.name;
+        this.cpLat = Number(item.latitude).toFixed(6);
+        this.cpLng = Number(item.longitude).toFixed(6);
+        this.cpResults = [];
+    },
     init() {
         let sec = 899;
         setInterval(() => {
@@ -642,9 +671,52 @@
 
     <!-- MODAL 2: Record Checkpoint Event -->
     <div x-cloak x-show="addEventModal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200" @click.away="addEventModal = false">
-            <h3 class="text-base font-bold text-slate-900 mb-1">Record Tracking Checkpoint</h3>
-            <p class="text-xs text-slate-500 mb-4">Adds a milestone checkpoint to {{ $shipment->shipment_number }}</p>
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200" @click.away="addEventModal = false">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center space-x-1.5">
+                        <span class="text-sky-600">📍</span>
+                        <span>Record Tracking Checkpoint</span>
+                    </h3>
+                    <p class="text-xs text-slate-500">Add operational tracking event to {{ $shipment->shipment_number }}</p>
+                </div>
+                <button type="button" @click="addEventModal = false" class="text-slate-400 hover:text-slate-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- Quick Location Autocomplete (Google Maps Style) -->
+            <div class="mb-3 relative">
+                <label class="block font-bold text-slate-700 mb-1">🔍 Search Location / Port (Google Maps Autocomplete)</label>
+                <div class="relative">
+                    <input type="text" 
+                           x-model="cpSearchQuery" 
+                           @input.debounce.300ms="doCpSearch()" 
+                           placeholder="Type to search (e.g. Belawan, Sunda Strait, Singapore Port)..." 
+                           class="w-full pl-8 pr-8 py-2 border-2 border-sky-400 focus:border-sky-600 rounded-lg outline-none text-xs">
+                    <div class="absolute left-2.5 top-2.5 text-slate-400">
+                        <svg class="w-3.5 h-3.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
+                    <div x-show="cpSearching" class="absolute right-2.5 top-2.5">
+                        <svg class="animate-spin h-3.5 w-3.5 text-sky-600" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                    </div>
+                </div>
+
+                <div x-show="cpResults.length > 0" 
+                     @click.away="cpResults = []" 
+                     class="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-300 rounded-lg shadow-xl max-h-48 overflow-y-auto divide-y divide-slate-100">
+                    <template x-for="(item, idx) in cpResults" :key="idx">
+                        <div @click="selectCpPlace(item)" class="p-2 hover:bg-sky-50 cursor-pointer text-xs flex items-start space-x-2">
+                            <span class="mt-0.5">📍</span>
+                            <div>
+                                <div class="font-bold text-slate-900" x-text="item.name"></div>
+                                <div class="text-[10px] text-slate-500" x-text="item.address"></div>
+                                <div class="text-[9px] font-mono text-sky-700" x-text="'[' + item.latitude + ', ' + item.longitude + ']'"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
 
             <form action="{{ route('tracking.store', $shipment->id) }}" method="POST" class="space-y-3 text-xs">
                 @csrf
@@ -661,17 +733,17 @@
 
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Location Name / Maritime Fairway</label>
-                    <input type="text" name="location_name" required placeholder="e.g. Sunda Strait Channel, Berth 4" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none">
+                    <input type="text" name="location_name" x-model="cpLocationName" required placeholder="e.g. Sunda Strait Channel, Berth 4" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none">
                 </div>
 
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Latitude</label>
-                        <input type="number" step="0.000001" name="latitude" placeholder="-6.1234" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none font-mono">
+                        <label class="block font-bold text-slate-700 mb-1">Latitude (Auto-filled)</label>
+                        <input type="number" step="any" name="latitude" x-model="cpLat" placeholder="-6.1234" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none font-mono bg-slate-50">
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Longitude</label>
-                        <input type="number" step="0.000001" name="longitude" placeholder="106.8765" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none font-mono">
+                        <label class="block font-bold text-slate-700 mb-1">Longitude (Auto-filled)</label>
+                        <input type="number" step="any" name="longitude" x-model="cpLng" placeholder="106.8765" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none font-mono bg-slate-50">
                     </div>
                 </div>
 

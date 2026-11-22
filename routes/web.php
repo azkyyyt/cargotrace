@@ -71,8 +71,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
 
-    // External Services Live Integration Inspector
+    // External Services Live Integration Inspector & Location Autocomplete Search
     Route::get('/integrations', [ExternalApiController::class, 'index'])->name('integrations.index');
+    Route::get('/locations/search', [LocationController::class, 'search'])->name('locations.search');
 
     // Administrator Only Routes
     Route::middleware('role:admin')->group(function () {

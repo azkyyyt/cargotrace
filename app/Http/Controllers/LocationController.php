@@ -23,6 +23,20 @@ class LocationController extends Controller
         return view('locations.index', compact('locations'));
     }
 
+    /**
+     * Live Places & Location Search API endpoint (Google Maps / OpenStreetMap Nominatim proxy)
+     */
+    public function search(Request $request)
+    {
+        $query = $request->query('q', '');
+        if (strlen(trim($query)) < 2) {
+            return response()->json([]);
+        }
+
+        $results = $this->externalApiService->searchPlaces($query, 6);
+        return response()->json($results);
+    }
+
     public function store(Request $request)
     {
         $user = Auth::user();
@@ -41,8 +55,8 @@ class LocationController extends Controller
             'address' => ['nullable', 'string'],
         ]);
 
-        // Auto-geocode if coordinates were not provided manually
-        if (empty($validated['latitude']) || empty($validated['longitude'])) {
+        // Auto-geocode if coordinates were not provided or set to 0
+        if (empty($validated['latitude']) || empty($validated['longitude']) || (float)$validated['latitude'] == 0.0) {
             $geo = $this->externalApiService->geocode("{$validated['name']}, {$validated['city']}, {$validated['country']}");
             $validated['latitude'] = $geo['latitude'];
             $validated['longitude'] = $geo['longitude'];
@@ -51,6 +65,6 @@ class LocationController extends Controller
         $location = Location::create($validated);
         AuditService::log('LOCATION_CREATED', $location, null, $location->toArray(), $user);
 
-        return redirect()->route('locations.index')->with('success', "Location {$location->name} created successfully.");
+        return redirect()->route('locations.index')->with('success', "Location {$location->name} ({$location->code}) added successfully with verified coordinates.");
     }
 }
