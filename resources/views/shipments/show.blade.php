@@ -1,9 +1,29 @@
 @extends('layouts.app')
 
-@section('title', 'Shipment ' . $shipment->shipment_number)
+@section('title', 'Shipment ' . $shipment->shipment_number . ' - Grain Logistics')
 
 @section('content')
-<div class="space-y-6" x-data="{ addEventModal: false, raiseExceptionModal: false, transitionModal: false, selectedTargetStatus: '' }">
+<div class="space-y-6" x-data="{ 
+    addEventModal: false, 
+    raiseExceptionModal: false, 
+    transitionModal: false, 
+    simulatePaymentModal: false, 
+    paymentMethod: 'QRIS_REALTIME', 
+    selectedTargetStatus: '',
+    selectedBank: 'BCA',
+    qrisTimer: '14:59',
+    init() {
+        let sec = 899;
+        setInterval(() => {
+            if (sec > 0) {
+                sec--;
+                const m = Math.floor(sec / 60).toString().padStart(2, '0');
+                const s = (sec % 60).toString().padStart(2, '0');
+                this.qrisTimer = `${m}:${s}`;
+            }
+        }, 1000);
+    }
+}">
 
     <!-- Top Breadcrumb & Status Header -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -12,9 +32,12 @@
                 <a href="{{ route('shipments.index') }}" class="hover:underline">Shipments</a>
                 <span>&rsaquo;</span>
                 <span class="font-mono font-bold text-slate-800">{{ $shipment->shipment_number }}</span>
+                <span>&rsaquo;</span>
+                <span class="text-sky-700 font-semibold">{{ $shipment->cargo_type }} Freight</span>
             </div>
-            <div class="flex items-center space-x-3">
+            <div class="flex flex-wrap items-center gap-3">
                 <h1 class="text-2xl font-black text-slate-900 tracking-tight font-mono">{{ $shipment->shipment_number }}</h1>
+                
                 @php
                     $badgeClass = match($shipment->current_status) {
                         'DELIVERED' => 'bg-emerald-100 text-emerald-800 border-emerald-300',
@@ -28,12 +51,33 @@
                 <span class="px-3 py-1 rounded-full text-xs font-extrabold border {{ $badgeClass }}">
                     {{ $shipment->current_status }}
                 </span>
+
+                <!-- Payment Status Badge -->
+                @if($shipment->payment_status === 'PAID')
+                    <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-300 flex items-center space-x-1.5 shadow-sm">
+                        <svg class="w-3.5 h-3.5 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        <span>PAID ({{ str_replace('_', ' ', $shipment->payment_method ?? 'VERIFIED') }})</span>
+                    </span>
+                @else
+                    <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 flex items-center space-x-1.5 animate-pulse shadow-sm">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                        <span>AWAITING PAYMENT</span>
+                    </span>
+                @endif
             </div>
         </div>
 
-        <!-- Operator / Admin Action Buttons -->
-        @if(Auth::user()->canManageShipments() && !$shipment->isTerminal())
-            <div class="flex flex-wrap items-center gap-2">
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap items-center gap-2">
+            <!-- Simulated Payment Gateway Trigger -->
+            @if($shipment->payment_status !== 'PAID')
+                <button type="button" @click="simulatePaymentModal = true" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                    <svg class="w-4 h-4 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    <span>⚡ Settle Payment (Gateway Sandbox)</span>
+                </button>
+            @endif
+
+            @if(Auth::user()->canManageShipments() && !$shipment->isTerminal())
                 <button type="button" @click="addEventModal = true" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm transition flex items-center space-x-1.5">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
                     <span>Record Checkpoint</span>
@@ -47,16 +91,16 @@
                 <a href="{{ route('shipments.edit', $shipment->id) }}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-2 rounded-lg transition">
                     Edit Details
                 </a>
-            </div>
-        @endif
+            @endif
+        </div>
     </div>
 
-    <!-- Status Lifecycle Stepper (Slide 6 Requirement) -->
+    <!-- Status Lifecycle Stepper -->
     <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
         <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Shipment Lifecycle Progression</span>
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Grain Consignment Lifecycle Progression</span>
             @if(Auth::user()->canManageShipments() && !$shipment->isTerminal())
-                <span class="text-[11px] text-sky-600 font-semibold">Click next step below to advance</span>
+                <span class="text-[11px] text-sky-600 font-semibold">Click next operational milestone below to advance</span>
             @endif
         </div>
 
@@ -85,9 +129,10 @@
         </div>
     </div>
 
-    <!-- ETA, Delay Evaluation & Weather Status Row (Slide 8 & 9) -->
+    <!-- ETA, Delay Evaluation & Weather Status Row -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- ETA & Delay Analysis Card (Slide 8 Requirement) -->
+        
+        <!-- ETA & Deterministic Delay Card -->
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
             <div class="flex items-center justify-between">
                 <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">ETA &amp; Delay Calculation</h3>
@@ -97,18 +142,18 @@
                     </span>
                 @else
                     <span class="px-2.5 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        ON TIME
+                        ON TIME SCHEDULE
                     </span>
                 @endif
             </div>
 
             <div class="grid grid-cols-2 gap-3 text-xs">
                 <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                    <span class="text-[10px] text-slate-400 font-medium block">Expected Arrival</span>
+                    <span class="text-[10px] text-slate-400 font-medium block">Contractual Expected Arrival</span>
                     <span class="font-bold text-slate-800">{{ $shipment->expected_arrival->format('M d, Y H:i') }}</span>
                 </div>
                 <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                    <span class="text-[10px] text-slate-400 font-medium block">Calculated ETA</span>
+                    <span class="text-[10px] text-slate-400 font-medium block">Deterministic ETA</span>
                     <span class="font-bold {{ $shipment->delay_status === 'DELAYED' ? 'text-rose-600' : 'text-slate-800' }}">
                         {{ $shipment->estimated_arrival->format('M d, Y H:i') }}
                     </span>
@@ -117,70 +162,91 @@
 
             <div class="p-3 rounded-lg border {{ $shipment->delay_status === 'DELAYED' ? 'bg-rose-50 border-rose-200 text-rose-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900' }} text-xs">
                 <div class="font-bold flex items-center justify-between">
-                    <span>Variance: {{ $shipment->delay_duration_hours }} Hours</span>
-                    <span class="text-[10px] opacity-75 font-normal">Threshold: {{ env('GROUP_DELAY_THRESHOLD_HOURS', 18) }}h</span>
+                    <span>Variance: +{{ $shipment->delay_duration_hours }} Hours</span>
+                    <span class="text-[10px] opacity-75 font-normal">Buffer Threshold: {{ env('GROUP_DELAY_THRESHOLD_HOURS', 18) }}h</span>
                 </div>
-                <p class="text-[11px] mt-1">{{ $shipment->delay_reason ?: 'Consignment is navigating on schedule within normal operational buffers.' }}</p>
+                <p class="text-[11px] mt-1">{{ $shipment->delay_reason ?: 'Vessel is navigating within nominal nautical margins along maritime trade corridors.' }}</p>
             </div>
         </div>
 
-        <!-- External Live Weather Integration (Slide 9 Requirement) -->
+        <!-- Live Oceanic Weather & Delay Check Integration (Open-Meteo) -->
         <div class="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-            <div class="flex items-center justify-between">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Live Contextual Weather Integration (External API)</h3>
-                <span class="text-[10px] text-slate-400">Open-Meteo API</span>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Live Contextual Oceanic Weather (External API)</h3>
+                    <p class="text-[11px] text-slate-500">Real-time Open-Meteo environmental monitoring along maritime lane</p>
+                </div>
+                
+                <!-- Weather Impact Calculation Button -->
+                <form action="{{ route('shipments.weatherCheck', $shipment->id) }}" method="POST">
+                    @csrf
+                    <button type="submit" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                        <svg class="w-3.5 h-3.5 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        <span>⚡ Calculate Live Weather Delay Impact</span>
+                    </button>
+                </form>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <!-- Origin Weather -->
                 <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
                     <div class="flex items-center justify-between font-bold text-slate-800 mb-1">
-                        <span>Origin: {{ $shipment->origin ? $shipment->origin->city : 'N/A' }}</span>
+                        <span>Origin: {{ $shipment->origin ? $shipment->origin->city : 'N/A' }} ({{ $shipment->origin ? $shipment->origin->country : '' }})</span>
                         <span class="text-sky-600 font-extrabold text-sm">{{ $originWeather['temperature'] ?? '--' }}&deg;C</span>
                     </div>
                     <div class="text-[11px] text-slate-600">{{ $originWeather['condition'] ?? 'Observing conditions' }}</div>
-                    <div class="text-[10px] text-slate-400 mt-1">Wind speed: {{ $originWeather['windspeed'] ?? '--' }} km/h &bull; {{ $originWeather['source'] ?? 'Service' }}</div>
+                    <div class="text-[10px] text-slate-400 mt-1">Wind speed: <strong class="text-slate-700">{{ $originWeather['windspeed'] ?? '--' }} km/h</strong> &bull; {{ $originWeather['source'] ?? 'Service' }}</div>
                 </div>
 
                 <!-- Destination Weather -->
                 <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
                     <div class="flex items-center justify-between font-bold text-slate-800 mb-1">
-                        <span>Destination: {{ $shipment->destination ? $shipment->destination->city : 'N/A' }}</span>
+                        <span>Destination: {{ $shipment->destination ? $shipment->destination->city : 'N/A' }} ({{ $shipment->destination ? $shipment->destination->country : '' }})</span>
                         <span class="text-sky-600 font-extrabold text-sm">{{ $destinationWeather['temperature'] ?? '--' }}&deg;C</span>
                     </div>
                     <div class="text-[11px] text-slate-600">{{ $destinationWeather['condition'] ?? 'Observing conditions' }}</div>
-                    <div class="text-[10px] text-slate-400 mt-1">Wind speed: {{ $destinationWeather['windspeed'] ?? '--' }} km/h &bull; {{ $destinationWeather['source'] ?? 'Service' }}</div>
+                    <div class="text-[10px] text-slate-400 mt-1">Wind speed: <strong class="text-slate-700">{{ $destinationWeather['windspeed'] ?? '--' }} km/h</strong> &bull; {{ $destinationWeather['source'] ?? 'Service' }}</div>
                 </div>
             </div>
 
-            <p class="text-[10px] text-slate-400 italic">
-                * Note (Slide 9 compliance): Weather conditions provide operational environmental visibility and do not replace deterministic delay calculations.
-            </p>
+            <div class="bg-sky-50/60 p-2.5 rounded-lg border border-sky-100 flex items-start space-x-2 text-[11px] text-slate-600">
+                <span class="text-sky-600 font-bold">&bull; Deterministic Delay Formula:</span>
+                <span>Wind &gt; 35 km/h &rarr; <strong>+8h delay</strong> &bull; Wind &gt; 50 km/h &rarr; <strong>+16h delay</strong> &bull; Wind &gt; 75 km/h &rarr; <strong>+28h delay</strong> (Triggers automatic WEATHER_DELAY exception).</span>
+            </div>
         </div>
     </div>
 
-    <!-- Leaflet Interactive Map View (Slide 9 Requirement) -->
+    <!-- Leaflet Interactive Map View (Esri HD English Basemap + Navigable Sea Corridors) -->
     <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-                <h3 class="text-sm font-bold text-slate-900">Interactive Route &amp; Checkpoint Map</h3>
-                <p class="text-xs text-slate-500">Leaflet.js + OpenStreetMap &bull; Origin, Intermediate Checkpoints &amp; Destination Waypoints</p>
+                <h3 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                    <span>Interactive Nautical Route &amp; Vessel Tracking Map</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-800">HD English Labels</span>
+                </h3>
+                <p class="text-xs text-slate-500">Leaflet.js &bull; High-Definition Global Basemap &bull; Navigable Sea Lanes &bull; Live Vessel Position &amp; Bearing</p>
             </div>
-            <span class="text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded font-mono">
-                {{ count($mapPoints) }} Map Waypoints
-            </span>
+            <div class="flex items-center space-x-2">
+                <span class="text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded font-mono font-bold">
+                    {{ count($mapPoints) }} Waypoints
+                </span>
+                <span class="text-xs bg-sky-100 text-sky-800 px-2.5 py-1 rounded font-bold">
+                    Single World (No Wrap)
+                </span>
+            </div>
         </div>
 
-        <div id="shipmentMap" class="w-full h-80 sm:h-96 rounded-lg border border-slate-200 shadow-inner z-10"></div>
+        <!-- Map Canvas with Ocean Background -->
+        <div id="shipmentMap" class="w-full h-80 sm:h-96 rounded-xl border border-slate-300 shadow-inner z-10" style="background: #a5bfdd;"></div>
     </div>
 
     <!-- Consignment Specs, Items, Timeline & Exceptions Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        <!-- Left 2 Cols: Tracking Timeline & Cargo Items -->
+        <!-- Left 2 Cols: Tracking Timeline & Manifest Items -->
         <div class="lg:col-span-2 space-y-6">
 
-            <!-- Chronological Tracking Timeline (Slide 7 Requirement) -->
+            <!-- Chronological Tracking Timeline -->
             <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                 <div class="flex items-center justify-between mb-4">
                     <div>
@@ -194,59 +260,87 @@
                     @endif
                 </div>
 
-                <div class="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                    @forelse($shipment->trackingEvents as $evt)
-                        @php
-                            $isEx = $evt->event_type === 'EXCEPTION_FLAG';
-                            $isRes = $evt->event_type === 'EXCEPTION_RESOLVED';
-                            $dotColor = $isEx ? 'bg-rose-500 ring-rose-200' : ($isRes ? 'bg-emerald-500 ring-emerald-200' : 'bg-sky-500 ring-sky-200');
-                        @endphp
-                        <div class="relative group text-xs">
-                            <!-- Dot -->
-                            <div class="absolute -left-6 top-1 w-3 h-3 rounded-full {{ $dotColor }} ring-4"></div>
+                <div class="relative border-l-2 border-slate-200 ml-3 space-y-6">
+                    @forelse($shipment->trackingEvents as $event)
+                        <div class="relative pl-6">
+                            @php
+                                $dotColor = match($event->event_type) {
+                                    'EXCEPTION_FLAG' => 'bg-rose-500 ring-rose-200',
+                                    'STATUS_UPDATE' => 'bg-sky-600 ring-sky-200',
+                                    default => 'bg-slate-400 ring-slate-200',
+                                };
+                            @endphp
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full {{ $dotColor }} ring-4"></div>
                             
-                            <div class="bg-slate-50 p-3 rounded-lg border {{ $isEx ? 'border-rose-200 bg-rose-50/50' : 'border-slate-100' }}">
-                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-[11px] text-slate-500 mb-1">
-                                    <span class="font-bold text-slate-900">{{ $evt->location_name }}</span>
-                                    <span>{{ $evt->event_time->format('M d, Y - H:i') }}</span>
-                                </div>
-                                <p class="text-slate-700 font-medium">{{ $evt->description }}</p>
-                                <div class="mt-2 flex items-center justify-between text-[10px] text-slate-400">
-                                    <span class="bg-slate-200 px-1.5 py-0.5 rounded font-mono">{{ $evt->status }}</span>
-                                    <span>Recorded by: {{ $evt->creator ? $evt->creator->name : 'System Dispatch' }}</span>
-                                </div>
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                                <span class="font-bold text-xs text-slate-900">{{ $event->location_name }}</span>
+                                <time class="text-[11px] text-slate-400 font-mono">{{ $event->event_time->format('M d, Y H:i') }}</time>
                             </div>
+                            
+                            <div class="mt-1 flex items-center space-x-2">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider {{ $event->event_type === 'EXCEPTION_FLAG' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700' }}">
+                                    {{ $event->status }} &bull; {{ $event->event_type }}
+                                </span>
+                                @if($event->latitude && $event->longitude)
+                                    <span class="text-[10px] font-mono text-slate-400">
+                                        [{{ number_format($event->latitude, 4) }}, {{ number_format($event->longitude, 4) }}]
+                                    </span>
+                                @endif
+                            </div>
+
+                            <p class="mt-1.5 text-xs text-slate-600">{{ $event->description }}</p>
+                            <span class="text-[10px] text-slate-400 block mt-1">Logged by: {{ $event->creator ? $event->creator->name : 'System Automated' }}</span>
                         </div>
                     @empty
-                        <p class="text-xs text-slate-400">No events recorded yet.</p>
+                        <div class="pl-6 text-xs text-slate-400 py-3">No tracking events recorded yet.</div>
                     @endforelse
                 </div>
             </div>
 
-            <!-- Cargo Items Breakdown (Slide 11 Requirement) -->
+            <!-- Bulk Grain Cargo Manifest Breakdown -->
             <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                <h3 class="text-sm font-bold text-slate-900 mb-3">Manifest &amp; Cargo Items</h3>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-bold text-slate-900">Bulk Grain Manifest &amp; Quality Specifications</h3>
+                    <span class="text-xs font-mono font-bold text-sky-700">{{ $shipment->items->count() }} Manifest Entries</span>
+                </div>
+
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-xs text-left">
                         <thead class="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider">
                             <tr>
-                                <th class="py-2 px-3">Item Description</th>
-                                <th class="py-2 px-3">Package</th>
-                                <th class="py-2 px-3">Quantity</th>
-                                <th class="py-2 px-3">Weight</th>
-                                <th class="py-2 px-3">Volume</th>
-                                <th class="py-2 px-3">HS Code</th>
+                                <th class="py-2.5 px-3">Grain Commodity</th>
+                                <th class="py-2.5 px-3">Grade Specification</th>
+                                <th class="py-2.5 px-3">Moisture %</th>
+                                <th class="py-2.5 px-3">Quantity</th>
+                                <th class="py-2.5 px-3">Weight (MT)</th>
+                                <th class="py-2.5 px-3">Packaging</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 text-slate-700">
                             @forelse($shipment->items as $item)
                                 <tr>
-                                    <td class="py-2.5 px-3 font-medium text-slate-900">{{ $item->item_description }}</td>
-                                    <td class="py-2.5 px-3">{{ $item->package_type }}</td>
-                                    <td class="py-2.5 px-3">{{ $item->quantity }} units</td>
-                                    <td class="py-2.5 px-3">{{ number_format($item->weight, 1) }} kg</td>
-                                    <td class="py-2.5 px-3">{{ $item->volume }} CBM</td>
-                                    <td class="py-2.5 px-3 font-mono text-slate-500">{{ $item->hs_code ?: '-' }}</td>
+                                    <td class="py-3 px-3 font-bold text-slate-900">
+                                        {{ $item->item_description }}
+                                    </td>
+                                    <td class="py-3 px-3 font-medium text-slate-700">
+                                        {{ $item->grade_specification ?? 'Standard Bulk Commercial' }}
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        <span class="font-bold {{ ($item->moisture_content_percent ?? 12) > 14 ? 'text-amber-600' : 'text-emerald-700' }}">
+                                            {{ $item->moisture_content_percent ? $item->moisture_content_percent . '%' : '12.5%' }}
+                                        </span>
+                                        <span class="text-[10px] text-slate-400 block">&le;14% Safe</span>
+                                    </td>
+                                    <td class="py-3 px-3">{{ $item->quantity }} units</td>
+                                    <td class="py-3 px-3 font-mono font-bold text-slate-900">
+                                        {{ number_format($item->weight / 1000, 1) }} MT
+                                        <span class="text-[10px] font-sans text-slate-400 block">({{ number_format($item->weight, 0) }} kg)</span>
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        <span class="bg-slate-100 px-2 py-0.5 rounded text-[10px] font-mono text-slate-700">
+                                            {{ str_replace('_', ' ', $item->packaging_type ?? 'BULK_VESSEL_HOLD') }}
+                                        </span>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
@@ -262,9 +356,12 @@
         <!-- Right 1 Col: Shipment Details & Exceptions -->
         <div class="space-y-6">
 
-            <!-- Core Shipment Specifications -->
+            <!-- Core Shipment Specifications Card -->
             <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3 text-xs">
-                <h3 class="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2">Consignment Details</h3>
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <h3 class="text-sm font-bold text-slate-900">Consignment Details</h3>
+                    <span class="text-[11px] font-bold text-sky-700">Grain Charter</span>
+                </div>
                 
                 <div class="space-y-2 text-slate-600">
                     <div class="flex justify-between">
@@ -276,56 +373,81 @@
                         <span class="font-medium text-slate-800">{{ $shipment->customer ? $shipment->customer->company : 'N/A' }}</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-slate-400">Carrier:</span>
+                        <span class="text-slate-400">Carrier Line:</span>
                         <span class="font-bold text-sky-700">{{ $shipment->carrier ? $shipment->carrier->name : 'Unassigned' }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Transport Mode:</span>
-                        <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-800">{{ $shipment->carrier ? $shipment->carrier->transport_mode : '-' }}</span>
+                        <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-bold">{{ $shipment->carrier ? $shipment->carrier->transport_mode : 'OCEAN' }}</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-slate-400">Cargo Type:</span>
-                        <span class="font-medium text-slate-800">{{ $shipment->cargo_type }}</span>
+                        <span class="text-slate-400">Commodity Type:</span>
+                        <span class="font-bold text-slate-900">{{ $shipment->cargo_type }}</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-slate-400">Total Weight:</span>
-                        <span class="font-bold text-slate-900">{{ number_format($shipment->weight, 0) }} kg</span>
+                        <span class="text-slate-400">Total Bulk Weight:</span>
+                        <span class="font-black text-slate-900">{{ number_format($shipment->weight / 1000, 1) }} Metric Tons</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-slate-400">Total Volume:</span>
-                        <span class="font-bold text-slate-900">{{ $shipment->volume }} CBM</span>
+                        <span class="text-slate-400">Stowage Volume:</span>
+                        <span class="font-bold text-slate-900">{{ number_format($shipment->volume, 1) }} CBM</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-slate-400">Origin Port/Hub:</span>
+                        <span class="text-slate-400">Origin Port:</span>
                         <span class="font-medium text-slate-800">{{ $shipment->origin ? $shipment->origin->name : '-' }}</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-slate-400">Destination Port/Hub:</span>
+                        <span class="text-slate-400">Destination Port:</span>
                         <span class="font-medium text-slate-800">{{ $shipment->destination ? $shipment->destination->name : '-' }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Expected Departure:</span>
-                        <span class="text-slate-800">{{ $shipment->expected_departure->format('Y-m-d H:i') }}</span>
+                        <span class="text-slate-800 font-mono">{{ $shipment->expected_departure->format('Y-m-d H:i') }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Actual Departure:</span>
-                        <span class="text-slate-800">{{ $shipment->actual_departure ? $shipment->actual_departure->format('Y-m-d H:i') : 'Pending' }}</span>
+                        <span class="text-slate-800 font-mono">{{ $shipment->actual_departure ? $shipment->actual_departure->format('Y-m-d H:i') : 'Pending departure' }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Actual Arrival:</span>
-                        <span class="text-slate-800">{{ $shipment->actual_arrival ? $shipment->actual_arrival->format('Y-m-d H:i') : 'In progress' }}</span>
+                        <span class="text-slate-800 font-mono">{{ $shipment->actual_arrival ? $shipment->actual_arrival->format('Y-m-d H:i') : 'En route' }}</span>
                     </div>
+                </div>
+
+                <!-- Financial Escrow & Freight Cost Summary -->
+                <div class="mt-4 pt-3 border-t border-slate-100 space-y-2 bg-slate-50 p-3 rounded-lg">
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-500 font-semibold">Freight Charge:</span>
+                        <span class="text-sm font-black text-slate-900 font-mono">${{ number_format($shipment->freight_charge_usd ?? 0, 2) }} USD</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-500">Payment Status:</span>
+                        <span class="font-bold text-xs {{ $shipment->payment_status === 'PAID' ? 'text-emerald-700' : 'text-amber-700' }}">
+                            {{ $shipment->payment_status }}
+                        </span>
+                    </div>
+                    @if($shipment->payment_reference)
+                        <div class="flex justify-between items-center text-[10px]">
+                            <span class="text-slate-400">Payment Ref:</span>
+                            <span class="font-mono text-slate-700 font-bold">{{ $shipment->payment_reference }}</span>
+                        </div>
+                    @endif
+                    @if($shipment->payment_status !== 'PAID')
+                        <button type="button" @click="simulatePaymentModal = true" class="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 px-3 rounded text-center transition">
+                            Pay Now via Sandbox Gateway &rarr;
+                        </button>
+                    @endif
                 </div>
 
                 @if($shipment->notes)
                     <div class="pt-2 border-t border-slate-100">
-                        <span class="text-[11px] text-slate-400 block mb-0.5">Handling Notes:</span>
+                        <span class="text-[11px] text-slate-400 block mb-0.5">Handling / Stowage Notes:</span>
                         <p class="text-slate-700 italic text-[11px]">{{ $shipment->notes }}</p>
                     </div>
                 @endif
             </div>
 
-            <!-- Exception Management Panel (Slide 8 Requirement) -->
+            <!-- Exception Management Panel -->
             <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                     <h3 class="text-sm font-bold text-slate-900">Disruption Exceptions</h3>
@@ -365,78 +487,213 @@
                                     </div>
                                 </form>
                             @endif
-
-                            @if($ex->status === 'RESOLVED' && $ex->resolution_notes)
-                                <div class="mt-2 text-[11px] text-emerald-700 bg-emerald-50 p-2 rounded border border-emerald-200">
-                                    <strong>Resolution:</strong> {{ $ex->resolution_notes }}
-                                </div>
-                            @endif
                         </div>
                     @empty
-                        <p class="text-xs text-slate-400 text-center py-4">No active exceptions logged for this consignment.</p>
+                        <div class="text-center py-4 text-xs text-slate-400">
+                            No disruptions or exceptions logged. Consignment on schedule.
+                        </div>
                     @endforelse
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal 1: Add Tracking Event Checkpoint -->
-    <div x-cloak x-show="addEventModal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200" @click.away="addEventModal = false">
-            <h3 class="text-base font-bold text-slate-900 mb-1">Record Tracking Checkpoint</h3>
-            <p class="text-xs text-slate-500 mb-4">Adds an immutable event to {{ $shipment->shipment_number }}</p>
+    <!-- MODAL 1: Real-Time Payment Gateway Simulation -->
+    <div x-cloak x-show="simulatePaymentModal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200" @click.away="simulatePaymentModal = false">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                        <span>CargoTrace Payment Gateway Sandbox</span>
+                    </h3>
+                    <p class="text-xs text-slate-500">Real-time instant freight settlement simulation for {{ $shipment->shipment_number }}</p>
+                </div>
+                <button type="button" @click="simulatePaymentModal = false" class="text-slate-400 hover:text-slate-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
 
-            <form action="{{ route('tracking.store', $shipment->id) }}" method="POST" class="space-y-3 text-xs">
+            <!-- Amount Banner -->
+            <div class="bg-gradient-to-r from-slate-900 to-sky-950 text-white p-4 rounded-xl mb-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-sky-300 block">Total Freight Escrow Amount</span>
+                        <div class="text-2xl font-black font-mono tracking-tight text-white">
+                            ${{ number_format($shipment->freight_charge_usd ?? 45000, 2) }} <span class="text-xs font-normal text-sky-200">USD</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] uppercase font-bold text-slate-400 block">IDR Equivalent</span>
+                        <div class="text-xs font-mono font-bold text-slate-200">
+                            Rp {{ number_format(($shipment->freight_charge_usd ?? 45000) * 16250, 0, ',', '.') }}
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-2 text-[11px] text-sky-200 border-t border-sky-800/60 pt-2 flex items-center justify-between">
+                    <span>Cargo: <strong>{{ $shipment->cargo_type }}</strong> ({{ number_format($shipment->weight / 1000, 1) }} MT)</span>
+                    <span>Carrier: <strong>{{ $shipment->carrier ? $shipment->carrier->name : 'Ocean Carrier' }}</strong></span>
+                </div>
+            </div>
+
+            <!-- Payment Method Tabs -->
+            <div class="grid grid-cols-3 gap-2 mb-4 text-xs font-bold">
+                <button type="button" @click="paymentMethod = 'QRIS_REALTIME'" :class="paymentMethod === 'QRIS_REALTIME' ? 'bg-sky-600 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'" class="py-2 px-2 rounded-lg text-center transition">
+                    📱 QRIS Instant
+                </button>
+                <button type="button" @click="paymentMethod = 'VIRTUAL_ACCOUNT'" :class="paymentMethod === 'VIRTUAL_ACCOUNT' ? 'bg-sky-600 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'" class="py-2 px-2 rounded-lg text-center transition">
+                    🏦 Virtual Account
+                </button>
+                <button type="button" @click="paymentMethod = 'LETTER_OF_CREDIT'" :class="paymentMethod === 'LETTER_OF_CREDIT' ? 'bg-sky-600 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'" class="py-2 px-2 rounded-lg text-center transition">
+                    📄 Letter of Credit
+                </button>
+            </div>
+
+            <form action="{{ route('shipments.simulatePayment', $shipment->id) }}" method="POST">
                 @csrf
-                <div>
-                    <label class="block font-bold text-slate-700 mb-1">Status / Phase</label>
-                    <select name="status" required class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none bg-white">
-                        @foreach(['CREATED', 'BOOKED', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERED'] as $st)
-                            <option value="{{ $st }}" {{ $shipment->current_status === $st ? 'selected' : '' }}>{{ $st }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                <input type="hidden" name="payment_method" :value="paymentMethod">
 
-                <div>
-                    <label class="block font-bold text-slate-700 mb-1">Select Facility or Hub</label>
-                    <select name="location_id" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none bg-white">
-                        <option value="">-- Choose Registered Location --</option>
-                        @foreach($locations as $loc)
-                            <option value="{{ $loc->id }}">{{ $loc->name }} ({{ $loc->city }}, {{ $loc->country }})</option>
-                        @endforeach
-                    </select>
-                </div>
+                <!-- TAB 1: QRIS Interface -->
+                <div x-show="paymentMethod === 'QRIS_REALTIME'" class="space-y-3">
+                    <div class="border-2 border-slate-200 rounded-xl p-4 text-center bg-slate-50/50">
+                        <div class="flex items-center justify-between border-b border-slate-200 pb-2 mb-3">
+                            <span class="text-xs font-black tracking-wider text-rose-700">QRIS STANDAR PEMBAYARAN NASIONAL</span>
+                            <span class="text-[10px] font-mono text-slate-500" x-text="'Expires in: ' + qrisTimer"></span>
+                        </div>
+                        
+                        <!-- Realistic QR Mockup -->
+                        <div class="inline-block p-3 bg-white border border-slate-300 rounded-lg shadow-sm">
+                            <div class="w-40 h-40 bg-slate-900 rounded flex flex-col items-center justify-center text-white p-2 relative overflow-hidden">
+                                <div class="absolute inset-0 opacity-15 flex flex-wrap gap-1 p-1">
+                                    <template x-for="i in 100" :key="i">
+                                        <div class="w-3 h-3 bg-white"></div>
+                                    </template>
+                                </div>
+                                <div class="relative z-10 text-center">
+                                    <div class="text-2xl font-black text-amber-400">🌾</div>
+                                    <div class="text-[9px] font-bold mt-1 text-slate-200">CARGOTRACE ESCROW</div>
+                                    <div class="text-[8px] font-mono text-sky-300 mt-0.5">SCAN REAL-TIME</div>
+                                </div>
+                            </div>
+                        </div>
 
-                <div>
-                    <label class="block font-bold text-slate-700 mb-1">Checkpoint Location Name (or Custom)</label>
-                    <input type="text" name="location_name" placeholder="e.g. Malacca Strait Waypoint, PSA Terminal 3" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none">
-                </div>
-
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block font-bold text-slate-700 mb-1">Latitude</label>
-                        <input type="number" step="any" name="latitude" placeholder="e.g. 1.2902" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none">
+                        <div class="mt-3 text-xs text-slate-700">
+                            Merchant: <strong>PT CARGOTRACE MARITIME LOGISTICS</strong><br>
+                            <span class="text-[11px] text-slate-500">Scan with BCA, Mandiri Livin, GoPay, OVO, Dana or any QRIS mobile banking</span>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block font-bold text-slate-700 mb-1">Longitude</label>
-                        <input type="number" step="any" name="longitude" placeholder="e.g. 103.8519" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none">
+
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md transition flex items-center justify-center space-x-2">
+                        <svg class="w-4 h-4 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        <span>Simulate Instant QRIS Payment Success</span>
+                    </button>
+                </div>
+
+                <!-- TAB 2: Virtual Account Interface -->
+                <div x-show="paymentMethod === 'VIRTUAL_ACCOUNT'" class="space-y-3">
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold text-slate-700">Select Bank</label>
+                        <div class="grid grid-cols-4 gap-2 text-xs">
+                            <button type="button" @click="selectedBank = 'BCA'" :class="selectedBank === 'BCA' ? 'border-sky-600 bg-sky-50 text-sky-800 font-bold' : 'border-slate-200 text-slate-600'" class="py-2 border rounded-lg text-center">BCA</button>
+                            <button type="button" @click="selectedBank = 'Mandiri'" :class="selectedBank === 'Mandiri' ? 'border-sky-600 bg-sky-50 text-sky-800 font-bold' : 'border-slate-200 text-slate-600'" class="py-2 border rounded-lg text-center">Mandiri</button>
+                            <button type="button" @click="selectedBank = 'BNI'" :class="selectedBank === 'BNI' ? 'border-sky-600 bg-sky-50 text-sky-800 font-bold' : 'border-slate-200 text-slate-600'" class="py-2 border rounded-lg text-center">BNI</button>
+                            <button type="button" @click="selectedBank = 'BRI'" :class="selectedBank === 'BRI' ? 'border-sky-600 bg-sky-50 text-sky-800 font-bold' : 'border-slate-200 text-slate-600'" class="py-2 border rounded-lg text-center">BRI</button>
+                        </div>
                     </div>
+
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
+                        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block" x-text="selectedBank + ' Virtual Account Number'"></span>
+                        <div class="flex items-center justify-between">
+                            <span class="font-mono text-base font-extrabold text-slate-900 tracking-wider">8809 1029 4432 0981</span>
+                            <span class="text-[10px] bg-sky-100 text-sky-800 px-2 py-0.5 rounded font-bold">Copy</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 pt-1">Automated validation via webhook. Payment will be acknowledged within seconds.</p>
+                    </div>
+
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md transition flex items-center justify-center space-x-2">
+                        <svg class="w-4 h-4 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        <span>Simulate VA Payment Acknowledged</span>
+                    </button>
                 </div>
 
-                <div>
-                    <label class="block font-bold text-slate-700 mb-1">Event Description</label>
-                    <textarea name="description" rows="3" required placeholder="Describe status update, vessel movement, or cargo inspection..." class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none"></textarea>
-                </div>
+                <!-- TAB 3: Letter of Credit (L/C) Interface -->
+                <div x-show="paymentMethod === 'LETTER_OF_CREDIT'" class="space-y-3">
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
+                        <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+                            <span class="font-bold text-slate-800">Swift MT700 Irrevocable Documentary Credit</span>
+                            <span class="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-mono font-bold">L/C AT SIGHT</span>
+                        </div>
+                        <div class="space-y-1 text-slate-600">
+                            <div>Issuing Bank: <strong>Citibank N.A. Jakarta / Standard Chartered</strong></div>
+                            <div>Beneficiary: <strong>CargoTrace Global Grain Logistics Carrier Line</strong></div>
+                            <div>Advising Reference: <span class="font-mono font-bold text-slate-900">LC-2026-CT-990812</span></div>
+                            <div class="text-[11px] text-slate-500 pt-1">Standard banking collateral for international commodity grain movements (wheat, corn, soybeans, rice).</div>
+                        </div>
+                    </div>
 
-                <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
-                    <button type="button" @click="addEventModal = false" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-lg shadow-sm transition">Save Event</button>
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md transition flex items-center justify-center space-x-2">
+                        <svg class="w-4 h-4 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        <span>Verify &amp; Confirm Documentary Credit (L/C)</span>
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal 2: Raise Exception -->
+    <!-- MODAL 2: Record Checkpoint Event -->
+    <div x-cloak x-show="addEventModal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200" @click.away="addEventModal = false">
+            <h3 class="text-base font-bold text-slate-900 mb-1">Record Tracking Checkpoint</h3>
+            <p class="text-xs text-slate-500 mb-4">Adds a milestone checkpoint to {{ $shipment->shipment_number }}</p>
+
+            <form action="{{ route('tracking.store', $shipment->id) }}" method="POST" class="space-y-3 text-xs">
+                @csrf
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Status Classification</label>
+                    <select name="status" required class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none bg-white">
+                        <option value="CREATED">CREATED</option>
+                        <option value="BOOKED">BOOKED</option>
+                        <option value="PICKED_UP">PICKED_UP</option>
+                        <option value="IN_TRANSIT" selected>IN_TRANSIT</option>
+                        <option value="DELIVERED">DELIVERED</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Location Name / Maritime Fairway</label>
+                    <input type="text" name="location_name" required placeholder="e.g. Sunda Strait Channel, Berth 4" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Latitude</label>
+                        <input type="number" step="0.000001" name="latitude" placeholder="-6.1234" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none font-mono">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Longitude</label>
+                        <input type="number" step="0.000001" name="longitude" placeholder="106.8765" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none font-mono">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Event Timestamp</label>
+                    <input type="datetime-local" name="event_time" value="{{ now()->format('Y-m-d\TH:i') }}" required class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none">
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Operational Description</label>
+                    <textarea name="description" rows="2" required placeholder="Describe checkpoint details..." class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+                    <button type="button" @click="addEventModal = false" class="px-3 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-lg shadow-sm">Save Checkpoint</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Raise Exception -->
     <div x-cloak x-show="raiseExceptionModal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200" @click.away="raiseExceptionModal = false">
             <h3 class="text-base font-bold text-rose-600 mb-1">Flag Disruption Exception</h3>
@@ -445,14 +702,14 @@
             <form action="{{ route('exceptions.store', $shipment->id) }}" method="POST" class="space-y-3 text-xs">
                 @csrf
                 <div>
-                    <label class="block font-bold text-slate-700 mb-1">Exception Category (Slide 8)</label>
+                    <label class="block font-bold text-slate-700 mb-1">Exception Category</label>
                     <select name="exception_type" required class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none bg-white">
-                        <option value="CUSTOMS_HOLD">CUSTOMS_HOLD (Customs / Inspection)</option>
-                        <option value="WEATHER_DELAY">WEATHER_DELAY (Typhoon / Gale / Sea)</option>
-                        <option value="PORT_CONGESTION">PORT_CONGESTION (Berth / Terminal Congestion)</option>
-                        <option value="DOCUMENTATION_ISSUE">DOCUMENTATION_ISSUE (Paperwork discrepancy)</option>
-                        <option value="DAMAGED">DAMAGED (Cargo condition alert)</option>
-                        <option value="MISROUTED">MISROUTED (Carrier routing error)</option>
+                        <option value="CUSTOMS_HOLD">CUSTOMS_HOLD (Customs / Phyto-sanitary inspection)</option>
+                        <option value="WEATHER_DELAY">WEATHER_DELAY (Typhoon / High swell / Gale storm)</option>
+                        <option value="PORT_CONGESTION">PORT_CONGESTION (Grain silo / Terminal congestion)</option>
+                        <option value="DOCUMENTATION_ISSUE">DOCUMENTATION_ISSUE (Bill of Lading discrepancy)</option>
+                        <option value="DAMAGED">DAMAGED (Moisture / Cargo condition alert)</option>
+                        <option value="MISROUTED">MISROUTED (Carrier navigational diversion)</option>
                     </select>
                 </div>
 
@@ -478,7 +735,7 @@
         </div>
     </div>
 
-    <!-- Modal 3: Status Transition -->
+    <!-- MODAL 4: Status Transition -->
     <div x-cloak x-show="transitionModal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200" @click.away="transitionModal = false">
             <h3 class="text-base font-bold text-slate-900 mb-1">Transition Lifecycle Status</h3>
@@ -490,7 +747,7 @@
 
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Reason / Operational Remark</label>
-                    <input type="text" name="reason" placeholder="e.g. Vessel berthed at destination terminal, customs passed." class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none">
+                    <input type="text" name="reason" placeholder="e.g. Vessel berthed at destination terminal, discharge commencing." class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none">
                 </div>
 
                 <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
@@ -500,6 +757,7 @@
             </form>
         </div>
     </div>
+
 </div>
 @endsection
 
@@ -515,60 +773,102 @@
             return;
         }
 
-        const initialLat = vessel ? vessel.lat : (points[0] ? points[0].lat : 15);
-        const initialLng = vessel ? vessel.lng : (points[0] ? points[0].lng : 80);
+        const initialLat = vessel ? vessel.lat : (points[0] ? points[0].lat : -6.1);
+        const initialLng = vessel ? vessel.lng : (points[0] ? points[0].lng : 106.8);
 
-        // Initialize Leaflet map
+        // Initialize Leaflet map with single-world lock to prevent duplicate continents
         const map = L.map('shipmentMap', {
             zoomControl: true,
-            attributionControl: true
-        }).setView([initialLat, initialLng], 4);
+            attributionControl: true,
+            minZoom: 2,
+            maxZoom: 18,
+            maxBounds: [[-85, -180], [85, 180]],
+            maxBoundsViscosity: 1.0,
+            worldCopyJump: false
+        }).setView([initialLat, initialLng], 3);
 
-        // HD Tile Layers: CartoDB Voyager with crisp retina cities, capitals & countries + OSM Standard
-        const voyagerHD = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19,
-            subdomains: 'abcd',
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        // Global Basemaps with Universal HD English Labels (100% Free, Crisp, No API Key Required)
+        const esriStreetEnglish = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            minZoom: 2,
+            maxZoom: 18,
+            noWrap: true,
+            bounds: [[-85, -180], [85, 180]],
+            attribution: 'Tiles &copy; Esri &mdash; OpenStreetMap &amp; contributors, Delorme, NAVTEQ, TomTom'
         }).addTo(map);
 
-        const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        const esriTopoEnglish = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+            minZoom: 2,
+            maxZoom: 18,
+            noWrap: true,
+            bounds: [[-85, -180], [85, 180]],
+            attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom'
         });
 
-        // Layer Switcher for HD / Standard
+        const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            minZoom: 2,
+            maxZoom: 18,
+            noWrap: true,
+            bounds: [[-85, -180], [85, 180]],
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
+        });
+
+        // Layer Switcher
         L.control.layers({
-            "Carto Voyager HD (Cities & Labels)": voyagerHD,
+            "Global Navigation HD (English Labels)": esriStreetEnglish,
+            "Topographic Relief (English)": esriTopoEnglish,
             "OpenStreetMap Standard": osmStandard
         }, null, { position: 'topright' }).addTo(map);
 
         const bounds = [];
 
-        // 1. Draw Navigable Sea Lane Corridor
+        // 1. Draw Navigable Sea Lane Corridor with Antimeridian Split Safety
         if (corridor && corridor.length > 1) {
-            const corridorLatLngs = corridor.map(c => [c[0], c[1]]);
-            corridorLatLngs.forEach(c => bounds.push(c));
+            let segments = [];
+            let currentSegment = [];
 
-            // Soft glowing maritime fairway
-            L.polyline(corridorLatLngs, {
-                color: '#0284c7',
-                weight: 6,
-                opacity: 0.3,
-                lineCap: 'round',
-                lineJoin: 'round'
-            }).addTo(map);
+            corridor.forEach((pt) => {
+                const lat = pt[0];
+                const lng = pt[1];
+                bounds.push([lat, lng]);
 
-            // Flowing nautical dash line
-            L.polyline(corridorLatLngs, {
-                color: '#0284c7',
-                weight: 3,
-                opacity: 0.85,
-                dashArray: '8, 12'
-            }).addTo(map);
+                if (currentSegment.length > 0) {
+                    const prevLng = currentSegment[currentSegment.length - 1][1];
+                    // If longitude jump is > 180 degrees, split segment to avoid drawing lines across the globe
+                    if (Math.abs(lng - prevLng) > 180) {
+                        segments.push(currentSegment);
+                        currentSegment = [];
+                    }
+                }
+                currentSegment.push([lat, lng]);
+            });
+
+            if (currentSegment.length > 0) {
+                segments.push(currentSegment);
+            }
+
+            // Draw each seamless segment
+            segments.forEach(seg => {
+                // Soft glowing maritime fairway
+                L.polyline(seg, {
+                    color: '#0284c7',
+                    weight: 6,
+                    opacity: 0.3,
+                    lineCap: 'round',
+                    lineJoin: 'round'
+                }).addTo(map);
+
+                // Flowing nautical dash line
+                L.polyline(seg, {
+                    color: '#0284c7',
+                    weight: 3,
+                    opacity: 0.85,
+                    dashArray: '8, 12'
+                }).addTo(map);
+            });
         }
 
         // 2. Draw Checkpoints and Ports
-        points.forEach((pt, index) => {
+        points.forEach((pt) => {
             bounds.push([pt.lat, pt.lng]);
 
             let markerColor = '#0284c7';
@@ -590,7 +890,7 @@
 
             marker.bindPopup(`
                 <div style="font-family: inherit; font-size: 11px; line-height: 1.4;">
-                    <strong style="color: ${markerColor};">${pt.status}</strong><br>
+                    <strong style="color: ${markerColor}; font-size: 12px;">${pt.status}</strong><br>
                     <strong>${pt.name}</strong><br>
                     <span style="color: #64748b;">${pt.city}</span><br>
                     <span style="color: #0284c7; font-weight: bold;">${pt.time}</span>
@@ -598,7 +898,7 @@
             `);
         });
 
-        // 3. Draw Active Vessel / Flight Marker with Real Heading & Oceanic Pulse
+        // 3. Draw Active Vessel Marker with Real Heading & Radar Pulse
         if (vessel && vessel.lat && vessel.lng) {
             bounds.push([vessel.lat, vessel.lng]);
 
@@ -607,34 +907,34 @@
             let heading = vessel.heading || 0;
 
             const vesselHtml = `
-                <div style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
-                    <div style="position: absolute; width: 38px; height: 38px; border-radius: 50%; background: ${pinColor}; opacity: 0.3; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-                    <div style="position: relative; width: 34px; height: 34px; background: ${pinColor}; border: 2.5px solid #ffffff; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; transform: rotate(${heading}deg); transition: transform 0.5s ease;">
-                        <span style="font-size: 15px; display: inline-block;">${iconSymbol}</span>
+                <div style="position: relative; width: 46px; height: 46px; display: flex; align-items: center; justify-content: center;">
+                    <div style="position: absolute; width: 40px; height: 40px; border-radius: 50%; background: ${pinColor}; opacity: 0.25; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+                    <div style="position: relative; width: 36px; height: 36px; background: ${pinColor}; border: 2.5px solid #ffffff; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; transform: rotate(${heading}deg); transition: transform 0.5s ease;">
+                        <span style="font-size: 16px; display: inline-block;">${iconSymbol}</span>
                     </div>
-                    <div style="position: absolute; top: 1px; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 7px solid ${pinColor}; transform-origin: center 21px; transform: rotate(${heading}deg);"></div>
-                    ${vessel.has_exception ? '<span style="position: absolute; top: 2px; right: 2px; width: 11px; height: 11px; background: #dc2626; border: 2px solid white; border-radius: 50%; z-index: 20;"></span>' : ''}
+                    <div style="position: absolute; top: 1px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 8px solid ${pinColor}; transform-origin: center 23px; transform: rotate(${heading}deg);"></div>
+                    ${vessel.has_exception ? '<span style="position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; background: #dc2626; border: 2px solid white; border-radius: 50%; z-index: 20;"></span>' : ''}
                 </div>
             `;
 
             const vesselIcon = L.divIcon({
                 html: vesselHtml,
                 className: 'vessel-heading-pin',
-                iconSize: [44, 44],
-                iconAnchor: [22, 22]
+                iconSize: [46, 46],
+                iconAnchor: [23, 23]
             });
 
             const vesselMarker = L.marker([vessel.lat, vessel.lng], { icon: vesselIcon, zIndexOffset: 1000 }).addTo(map);
 
             vesselMarker.bindPopup(`
-                <div style="font-family: inherit; font-size: 11px; line-height: 1.5; min-width: 190px;">
-                    <div style="font-weight: 800; color: #0f172a; font-size: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 3px;">
-                        Live Vessel Position
+                <div style="font-family: inherit; font-size: 11px; line-height: 1.5; min-width: 200px;">
+                    <div style="font-weight: 800; color: #0f172a; font-size: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 4px;">
+                        Live Vessel Position &amp; Heading
                     </div>
                     <div><strong>Carrier:</strong> ${vessel.carrier_name}</div>
                     <div><strong>Current Location:</strong> ${vessel.name}</div>
-                    <div><strong>Course / Heading:</strong> <span style="font-family: monospace; font-weight: bold; color: #0284c7;">${vessel.heading}&deg; Course</span></div>
-                    <div><strong>Status:</strong> <span style="font-weight: bold; color: ${pinColor};">${vessel.status}</span></div>
+                    <div><strong>Course / Bearing:</strong> <span style="font-family: monospace; font-weight: bold; color: #0284c7;">${vessel.heading}&deg; Course</span></div>
+                    <div><strong>Current Status:</strong> <span style="font-weight: bold; color: ${pinColor};">${vessel.status}</span></div>
                 </div>
             `).openPopup();
 
@@ -651,7 +951,7 @@
         }
 
         if (bounds.length > 0) {
-            map.fitBounds(bounds, { padding: [50, 50] });
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6 });
         }
     });
 </script>

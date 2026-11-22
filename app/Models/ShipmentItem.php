@@ -12,9 +12,11 @@ class ShipmentItem extends Model
     protected $fillable = [
         'shipment_id',
         'item_description',
+        'grade_specification',
         'quantity',
         'weight',
         'volume',
+        'moisture_content_percent',
         'hs_code',
         'package_type',
     ];
@@ -23,6 +25,7 @@ class ShipmentItem extends Model
         'quantity' => 'integer',
         'weight' => 'float',
         'volume' => 'float',
+        'moisture_content_percent' => 'float',
     ];
 
     public function shipment()

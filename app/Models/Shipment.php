@@ -47,6 +47,10 @@ class Shipment extends Model
         'delay_severity',
         'delay_reason',
         'notes',
+        'payment_status',
+        'payment_method',
+        'payment_reference',
+        'freight_charge_usd',
     ];
 
     protected $casts = [

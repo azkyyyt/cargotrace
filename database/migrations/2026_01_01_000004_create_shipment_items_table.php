@@ -15,11 +15,13 @@ return new class extends Migration
             $table->id();
             $table->foreignId('shipment_id')->constrained('shipments')->onDelete('cascade');
             $table->string('item_description', 200);
+            $table->string('grade_specification', 150)->nullable()->comment('e.g. Non-GMO Grade 2, Protein 12.5%');
             $table->integer('quantity')->default(1);
-            $table->decimal('weight', 10, 2)->comment('weight in kg');
-            $table->decimal('volume', 10, 2)->nullable()->comment('volume in m3');
+            $table->decimal('weight', 12, 2)->comment('weight in MT or kg');
+            $table->decimal('volume', 12, 2)->nullable()->comment('volume in m3');
+            $table->decimal('moisture_content_percent', 5, 2)->nullable()->comment('Grain moisture %');
             $table->string('hs_code', 50)->nullable();
-            $table->string('package_type', 50)->default('BOX');
+            $table->string('package_type', 50)->default('BULK_HOLD');
             $table->timestamps();
         });
     }

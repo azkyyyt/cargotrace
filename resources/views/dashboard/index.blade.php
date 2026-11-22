@@ -141,6 +141,59 @@
         </div>
     </div>
 
+    <!-- Grain Commodities Quick Order Banner (Tahap 3 Innovation) -->
+    <div class="bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 border border-slate-800 rounded-2xl p-5 text-white shadow-lg">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center space-x-2 text-amber-400 font-bold text-xs uppercase tracking-wider mb-1">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span>International Grain Logistics &amp; Freight Escrow Simulator</span>
+                </div>
+                <h2 class="text-lg font-black tracking-tight text-white">Global Dry Bulk Consignment Booking</h2>
+                <p class="text-xs text-slate-300 mt-1 max-w-2xl">
+                    Order bulk shipments of <strong>Wheat, Corn, Soybeans, or Rice</strong> from major export loading silos (Brazil, Australia, USA, Thailand) to Indonesian discharge ports with real-time simulated payment gateway verification.
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('shipments.create') }}" class="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black px-4 py-2.5 rounded-xl shadow-md transition">
+                    <span>🌾</span>
+                    <span>Order Grain Cargo</span>
+                </a>
+            </div>
+        </div>
+        <!-- 4 Core Commodities Badges -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-800/80 text-xs">
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/50 flex items-center space-x-2.5">
+                <span class="text-xl">🌽</span>
+                <div>
+                    <p class="font-bold text-slate-200">Corn (Jagung)</p>
+                    <p class="text-[10px] text-slate-400">Santos, BR &rarr; Jakarta</p>
+                </div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/50 flex items-center space-x-2.5">
+                <span class="text-xl">🌾</span>
+                <div>
+                    <p class="font-bold text-slate-200">Wheat (Gandum)</p>
+                    <p class="text-[10px] text-slate-400">Fremantle, AU &rarr; Jakarta</p>
+                </div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/50 flex items-center space-x-2.5">
+                <span class="text-xl">🌱</span>
+                <div>
+                    <p class="font-bold text-slate-200">Soybeans (Kedelai)</p>
+                    <p class="text-[10px] text-slate-400">New Orleans, US &rarr; Qingdao</p>
+                </div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/50 flex items-center space-x-2.5">
+                <span class="text-xl">🍚</span>
+                <div>
+                    <p class="font-bold text-slate-200">Rice (Beras)</p>
+                    <p class="text-[10px] text-slate-400">Bangkok, TH &rarr; Surabaya</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Live Global Fleet Visibility Map (OpenStreetMap + Leaflet.js) -->
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-3">
@@ -162,7 +215,7 @@
         </div>
 
         <!-- Leaflet Map Container -->
-        <div id="fleetMap" class="w-full h-96 rounded-xl border border-slate-200 shadow-inner z-10"></div>
+        <div id="fleetMap" class="w-full h-96 rounded-xl border border-slate-300 shadow-inner z-10" style="background: #a5bfdd;"></div>
     </div>
 
     <!-- Chart.js Visualizations (Slide 10 & 14) -->
@@ -365,28 +418,47 @@
             }
         });
 
-        // Initialize Live Global Fleet Visibility Map (OpenStreetMap + Leaflet.js)
+        // Initialize Live Global Fleet Visibility Map (OpenStreetMap + Leaflet.js per PPT Slide 9)
         const fleetData = {!! json_encode($activeFleetShipments) !!};
         const fleetMap = L.map('fleetMap', {
             zoomControl: true,
-            attributionControl: true
-        }).setView([15, 80], 3);
+            attributionControl: true,
+            minZoom: 2,
+            maxZoom: 18,
+            maxBounds: [[-85, -180], [85, 180]], // Restrict panning so world map doesn't repeat infinitely
+            maxBoundsViscosity: 1.0,
+            worldCopyJump: false
+        }).setView([15, 60], 2);
 
-        // HD Tile Layers: CartoDB Voyager with crisp retina cities, capitals & countries + OSM Standard
-        const voyagerHD = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19,
-            subdomains: 'abcd',
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        // Global Basemaps with Universal English Labels (No API Key Required, 100% Free & Crisp HD)
+        const esriStreetEnglish = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            minZoom: 2,
+            maxZoom: 18,
+            noWrap: true, // Prevents duplicate world repeating side-by-side
+            bounds: [[-85, -180], [85, 180]],
+            attribution: 'Tiles &copy; Esri &mdash; OpenStreetMap &amp; contributors, Delorme, NAVTEQ, TomTom'
         }).addTo(fleetMap);
 
-        const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        const esriTopoEnglish = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+            minZoom: 2,
+            maxZoom: 18,
+            noWrap: true,
+            bounds: [[-85, -180], [85, 180]],
+            attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom'
         });
 
-        // Layer Switcher for HD / Standard
+        const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            minZoom: 2,
+            maxZoom: 18,
+            noWrap: true,
+            bounds: [[-85, -180], [85, 180]],
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
+        });
+
+        // Layer Switcher for English HD Navigation Map, Topographic, and OSM Standard
         L.control.layers({
-            "Carto Voyager HD (Cities & Labels)": voyagerHD,
+            "Global Navigation HD (English Labels)": esriStreetEnglish,
+            "Topographic Relief (English)": esriTopoEnglish,
             "OpenStreetMap Standard": osmStandard
         }, null, { position: 'topright' }).addTo(fleetMap);
 
@@ -394,27 +466,47 @@
         const animatedVessels = [];
 
         fleetData.forEach(shipment => {
-            // Draw Navigable Maritime Sea Corridor (Glow background + flowing animated dash)
+            // Draw Navigable Maritime Sea Corridor with Antimeridian Split Protection
             if (shipment.corridor && shipment.corridor.length > 1) {
                 const polyColor = shipment.has_exception ? '#ef4444' : (shipment.status === 'DELIVERED' ? '#10b981' : '#0284c7');
                 
-                // Soft glow corridor base line
-                L.polyline(shipment.corridor, {
-                    color: polyColor,
-                    weight: 5,
-                    opacity: 0.35,
-                    lineCap: 'round',
-                    lineJoin: 'round'
-                }).addTo(fleetMap);
+                let segments = [];
+                let currentSegment = [];
+                shipment.corridor.forEach((pt) => {
+                    const lat = pt[0];
+                    const lng = pt[1];
+                    if (currentSegment.length > 0) {
+                        const prevLng = currentSegment[currentSegment.length - 1][1];
+                        if (Math.abs(lng - prevLng) > 180) {
+                            segments.push(currentSegment);
+                            currentSegment = [];
+                        }
+                    }
+                    currentSegment.push([lat, lng]);
+                });
+                if (currentSegment.length > 0) {
+                    segments.push(currentSegment);
+                }
 
-                // Animated flowing dashed route (current flow effect)
-                const flowLine = L.polyline(shipment.corridor, {
-                    color: polyColor,
-                    weight: 3,
-                    opacity: 0.9,
-                    dashArray: '8, 12',
-                    className: 'flowing-corridor-dash'
-                }).addTo(fleetMap);
+                segments.forEach(seg => {
+                    // Soft glow corridor base line
+                    L.polyline(seg, {
+                        color: polyColor,
+                        weight: 5,
+                        opacity: 0.35,
+                        lineCap: 'round',
+                        lineJoin: 'round'
+                    }).addTo(fleetMap);
+
+                    // Animated flowing dashed route (current flow effect)
+                    L.polyline(seg, {
+                        color: polyColor,
+                        weight: 3,
+                        opacity: 0.9,
+                        dashArray: '8, 12',
+                        className: 'flowing-corridor-dash'
+                    }).addTo(fleetMap);
+                });
             }
 
             // Vessel / Flight Marker with heading rotation and oceanic ripple radar
@@ -500,7 +592,7 @@
         }, 300);
 
         if (bounds.length > 0) {
-            fleetMap.fitBounds(bounds, { padding: [50, 50] });
+            fleetMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 5 });
         }
     });
 </script>

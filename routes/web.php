@@ -42,6 +42,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');
     Route::get('/shipments/{id}', [ShipmentController::class, 'show'])->name('shipments.show');
 
+    // Customer Grain Booking & Payment Simulation (Any authenticated user can book/pay)
+    Route::post('/grain-book', [ShipmentController::class, 'bookGrain'])->name('shipments.bookGrain');
+    Route::post('/shipments/{id}/simulate-payment', [ShipmentController::class, 'simulatePayment'])->name('shipments.simulatePayment');
+    Route::post('/shipments/{id}/weather-check', [ShipmentController::class, 'checkWeatherImpact'])->name('shipments.weatherCheck');
+
     // Operations (Admin & Operator only)
     Route::middleware('role:admin,operator')->group(function () {
         Route::get('/shipments-create', [ShipmentController::class, 'create'])->name('shipments.create');

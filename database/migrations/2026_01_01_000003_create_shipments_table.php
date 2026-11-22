@@ -21,8 +21,14 @@ return new class extends Migration
             $table->foreignId('current_location_id')->nullable()->constrained('locations')->onDelete('set null');
             
             $table->string('cargo_type', 100);
-            $table->decimal('weight', 10, 2)->comment('in kg');
-            $table->decimal('volume', 10, 2)->comment('in m3 (CBM)');
+            $table->decimal('weight', 12, 2)->comment('in Metric Tons or kg');
+            $table->decimal('volume', 12, 2)->nullable()->comment('in m3 (CBM)');
+
+            // Simulated Payment Gateway & Freight Booking Fields
+            $table->enum('payment_status', ['UNPAID', 'PENDING', 'PAID'])->default('PAID')->index();
+            $table->string('payment_method', 50)->nullable()->comment('QRIS, VIRTUAL_ACCOUNT, LETTER_OF_CREDIT');
+            $table->string('payment_reference', 100)->nullable();
+            $table->decimal('freight_charge_usd', 12, 2)->default(0.00);
             
             $table->dateTime('expected_departure');
             $table->dateTime('expected_arrival');

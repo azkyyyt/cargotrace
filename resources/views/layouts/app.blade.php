@@ -57,18 +57,28 @@
                         </svg>
                     </button>
                     <a href="{{ route('dashboard') }}" class="flex items-center space-x-2">
-                        <div class="bg-gradient-to-tr from-sky-500 to-indigo-600 text-white p-2 rounded-lg font-bold shadow-md">
+                        <div class="bg-gradient-to-tr from-amber-500 to-sky-600 text-white p-2 rounded-lg font-bold shadow-md">
+                            <!-- Bulk Cargo Vessel & Grain Ear Icon -->
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
                             </svg>
                         </div>
-                        <span class="text-xl font-extrabold tracking-tight text-white">Cargo<span class="text-sky-400">Trace</span></span>
+                        <div>
+                            <span class="text-xl font-extrabold tracking-tight text-white">Cargo<span class="text-amber-400">Trace</span></span>
+                            <span class="hidden sm:inline-block text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-2 py-0.5 px-2 bg-slate-800 rounded">Grain Logistics</span>
+                        </div>
                     </a>
                 </div>
 
-                <!-- Right: Notifications & User Profile -->
+                <!-- Center/Right: Navigation & Action -->
                 <div class="flex items-center space-x-3">
+                    @auth
+                        <!-- Order Grain Consignment Button (Tahap 3 Innovation) -->
+                        <a href="{{ route('shipments.create') }}" class="inline-flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-extrabold px-3.5 py-1.5 rounded-lg shadow transition">
+                            <span>🌾</span>
+                            <span>Order Grain Cargo</span>
+                        </a>
+                    @endauth
                     @auth
                         <!-- Notification Bell -->
                         @php

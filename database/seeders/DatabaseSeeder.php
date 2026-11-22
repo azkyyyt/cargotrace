@@ -111,6 +111,15 @@ class DatabaseSeeder extends Seeder
                 'website' => 'https://www.evergreen-marine.com',
                 'is_active' => true,
             ],
+            [
+                'code' => 'CMA',
+                'name' => 'CMA CGM Bulk Logistics',
+                'transport_mode' => 'SEA',
+                'contact_email' => 'bulk@cma-cgm.example.com',
+                'contact_phone' => '+33 4 88 91 90 00',
+                'website' => 'https://www.cma-cgm.com',
+                'is_active' => true,
+            ],
         ];
 
         $carrierModels = [];
@@ -118,77 +127,87 @@ class DatabaseSeeder extends Seeder
             $carrierModels[$carrierData['code']] = Carrier::updateOrCreate(['code' => $carrierData['code']], $carrierData);
         }
 
-        // 3. Create Locations (Ports, Airports, Hubs with accurate Lat/Lng)
+        // 3. Create Locations (Major International Grain Loading Silos and Discharge Ports)
         $locations = [
             [
+                'code' => 'BRSSZ',
+                'name' => 'Port of Santos (Grain Terminal)',
+                'city' => 'Santos',
+                'country' => 'Brazil',
+                'type' => 'PORT',
+                'latitude' => -23.9678,
+                'longitude' => -46.2956,
+                'address' => 'Avenida Conselheiro Rodrigues Alves, Santos - SP, Brazil',
+            ],
+            [
                 'code' => 'IDTPP',
-                'name' => 'Tanjung Priok Port',
+                'name' => 'Tanjung Priok Bulk Terminal',
                 'city' => 'Jakarta',
                 'country' => 'Indonesia',
                 'type' => 'PORT',
                 'latitude' => -6.1038,
                 'longitude' => 106.8837,
-                'address' => 'Jl. Raya Pelabuhan No.9, Tanjung Priok, Jakarta Utara',
+                'address' => 'Dermaga Bogasari Grain Silos, Pelabuhan Tanjung Priok, Jakarta',
+            ],
+            [
+                'code' => 'IDSUB',
+                'name' => 'Tanjung Perak Port (Grain Silos)',
+                'city' => 'Surabaya',
+                'country' => 'Indonesia',
+                'type' => 'PORT',
+                'latitude' => -7.1982,
+                'longitude' => 112.7335,
+                'address' => 'Terminal Jamrud Utara, Pelabuhan Tanjung Perak, Surabaya',
+            ],
+            [
+                'code' => 'AUFRE',
+                'name' => 'Port of Fremantle (Kwinana Grain Terminal)',
+                'city' => 'Perth',
+                'country' => 'Australia',
+                'type' => 'PORT',
+                'latitude' => -32.0569,
+                'longitude' => 115.7439,
+                'address' => 'CBH Grain Jetty, Kwinana, Western Australia',
+            ],
+            [
+                'code' => 'USMSY',
+                'name' => 'Port of South Louisiana (Mississippi Grain Silos)',
+                'city' => 'New Orleans',
+                'country' => 'United States',
+                'type' => 'PORT',
+                'latitude' => 29.9511,
+                'longitude' => -90.0715,
+                'address' => 'Mississippi River Mile 118, Convent, LA, USA',
+            ],
+            [
+                'code' => 'CNTAO',
+                'name' => 'Port of Qingdao (Grain & Oil Terminal)',
+                'city' => 'Qingdao',
+                'country' => 'China',
+                'type' => 'PORT',
+                'latitude' => 36.0671,
+                'longitude' => 120.3826,
+                'address' => 'Dagang Port Area, Qingdao, Shandong, China',
+            ],
+            [
+                'code' => 'THBKK',
+                'name' => 'Port of Laem Chabang (Rice Bulk Pier)',
+                'city' => 'Bangkok',
+                'country' => 'Thailand',
+                'type' => 'PORT',
+                'latitude' => 13.0827,
+                'longitude' => 100.8833,
+                'address' => 'Laem Chabang Port Complex, Chonburi, Thailand',
             ],
             [
                 'code' => 'SGSIN',
-                'name' => 'Port of Singapore (PSA)',
+                'name' => 'Port of Singapore (PSA Grain Anchorage)',
                 'city' => 'Singapore',
                 'country' => 'Singapore',
                 'type' => 'PORT',
                 'latitude' => 1.2644,
                 'longitude' => 103.8228,
-                'address' => '7B Keppel Rd, Tanjong Pagar Complex, Singapore',
-            ],
-            [
-                'code' => 'NLRTM',
-                'name' => 'Port of Rotterdam',
-                'city' => 'Rotterdam',
-                'country' => 'Netherlands',
-                'type' => 'PORT',
-                'latitude' => 51.9054,
-                'longitude' => 4.3160,
-                'address' => 'Wilhelminakade 902, 3072 AP Rotterdam, Netherlands',
-            ],
-            [
-                'code' => 'USLAX',
-                'name' => 'Port of Los Angeles',
-                'city' => 'Los Angeles',
-                'country' => 'United States',
-                'type' => 'PORT',
-                'latitude' => 33.7432,
-                'longitude' => -118.2673,
-                'address' => '425 S. Palos Verdes St, San Pedro, CA 90731, USA',
-            ],
-            [
-                'code' => 'AUSYD',
-                'name' => 'Port Botany Sydney',
-                'city' => 'Sydney',
-                'country' => 'Australia',
-                'type' => 'PORT',
-                'latitude' => -33.9744,
-                'longitude' => 151.2183,
-                'address' => 'Brotherson Dock, Port Botany NSW 2036, Australia',
-            ],
-            [
-                'code' => 'CNSHG',
-                'name' => 'Port of Shanghai (Yangshan)',
-                'city' => 'Shanghai',
-                'country' => 'China',
-                'type' => 'PORT',
-                'latitude' => 30.6278,
-                'longitude' => 122.0642,
-                'address' => 'Yangshan Deepwater Port, Shanghai, China',
-            ],
-            [
-                'code' => 'DEHAM',
-                'name' => 'Port of Hamburg',
-                'city' => 'Hamburg',
-                'country' => 'Germany',
-                'type' => 'PORT',
-                'latitude' => 53.5353,
-                'longitude' => 9.9872,
-                'address' => 'Neuer Wandrahm 4, 20457 Hamburg, Germany',
+                'address' => 'Keppel Distripark, Singapore',
             ],
         ];
 
@@ -197,76 +216,83 @@ class DatabaseSeeder extends Seeder
             $locationModels[$locData['code']] = Location::updateOrCreate(['code' => $locData['code']], $locData);
         }
 
-        // 4. Create Shipments with realistic scenarios matching Group A, B, C slides
+        // 4. Create Shipments with realistic grain scenarios (Wheat, Corn, Soybeans, Rice)
         $now = Carbon::now();
 
-        // Scenario 1: Group A (Southeast Asia -> Europe: Tanjung Priok to Rotterdam) - Delayed due to Customs Hold
-        $s1Departure = $now->copy()->subDays(6);
-        $s1ExpectedArrival = $now->copy()->addDays(2);
-        $s1EstimatedArrival = $now->copy()->addDays(3)->addHours(4); // Delayed by ~28 hours (HIGH severity)
+        // Scenario 1: Corn (Santos, Brazil -> Tanjung Priok, Indonesia) - Paid via Real-time QRIS & Underway with Live Weather!
+        $s1Departure = $now->copy()->subDays(8);
+        $s1ExpectedArrival = $now->copy()->addDays(18);
+        $s1EstimatedArrival = $now->copy()->addDays(18)->addHours(8); // +8h slight sea swell
 
         $s1 = Shipment::create([
-            'shipment_number' => 'CT-2026-EUR01',
+            'shipment_number' => 'CT-2026-CRN01',
             'customer_id' => $customer1->id,
             'carrier_id' => $carrierModels['MSK']->id,
-            'origin_id' => $locationModels['IDTPP']->id,
-            'destination_id' => $locationModels['NLRTM']->id,
-            'current_location_id' => $locationModels['SGSIN']->id,
-            'cargo_type' => 'Consumer Electronics (High-Value)',
-            'weight' => 18450.00,
-            'volume' => 64.50,
+            'origin_id' => $locationModels['BRSSZ']->id,
+            'destination_id' => $locationModels['IDTPP']->id,
+            'current_location_id' => null,
+            'cargo_type' => 'Corn',
+            'weight' => 28000.00, // 28,000 Metric Tons
+            'volume' => 37800.00,
             'expected_departure' => $s1Departure,
             'expected_arrival' => $s1ExpectedArrival,
             'actual_departure' => $s1Departure,
             'estimated_arrival' => $s1EstimatedArrival,
             'current_status' => Shipment::STATUS_IN_TRANSIT,
             'delay_status' => 'DELAYED',
-            'delay_duration_hours' => 28,
-            'delay_severity' => 'HIGH',
-            'delay_reason' => 'Delay of 28h triggered by customs document inspection hold at transshipment hub.',
-            'notes' => 'Priority batch for European holiday market distribution.',
+            'delay_duration_hours' => 8,
+            'delay_severity' => 'LOW',
+            'delay_reason' => 'Moderate rough sea state off Cape of Good Hope (+8h speed reduction).',
+            'payment_status' => 'PAID',
+            'payment_method' => 'QRIS_REALTIME',
+            'payment_reference' => 'QRIS-2026-BRZ99120',
+            'freight_charge_usd' => 1358000.00,
+            'notes' => 'Bulk yellow corn for feed mill processing in West Java.',
         ]);
 
-        $s1->items()->createMany([
-            [
-                'item_description' => 'Lithium Battery Power Units',
-                'quantity' => 120,
-                'weight' => 6000.00,
-                'volume' => 22.00,
-                'hs_code' => '8507.60.00',
-                'package_type' => 'PALLET',
-            ],
-            [
-                'item_description' => 'Precision Audio Components',
-                'quantity' => 350,
-                'weight' => 12450.00,
-                'volume' => 42.50,
-                'hs_code' => '8518.22.00',
-                'package_type' => 'CRATE',
-            ],
+        $s1->items()->create([
+            'item_description' => 'Brazilian Yellow Corn #2 (Non-GMO)',
+            'grade_specification' => 'Moisture Max 14.0%, Broken Kernels Max 3.0%',
+            'quantity' => 1,
+            'weight' => 28000.00,
+            'volume' => 37800.00,
+            'moisture_content_percent' => 13.20,
+            'hs_code' => '1005.90.00',
+            'package_type' => 'BULK_VESSEL_HOLD',
         ]);
 
-        // Realistic Maritime Sea Route: Jakarta -> Sunda Strait -> Singapore -> Malacca Strait -> Indian Ocean -> Red Sea -> Suez Canal -> Mediterranean -> Gibraltar -> English Channel -> Rotterdam
         $s1->trackingEvents()->create([
             'event_type' => 'STATUS_UPDATE',
             'status' => 'CREATED',
-            'location_id' => $locationModels['IDTPP']->id,
-            'location_name' => $locationModels['IDTPP']->name,
-            'latitude' => -6.1038,
-            'longitude' => 106.8837,
-            'description' => 'Shipment booking registered in system.',
+            'location_id' => $locationModels['BRSSZ']->id,
+            'location_name' => $locationModels['BRSSZ']->name,
+            'latitude' => -23.9678,
+            'longitude' => -46.2956,
+            'description' => 'Grain freight booking placed by PT Budi Santoso Agrobisnis. Awaiting payment.',
             'event_time' => $s1Departure->copy()->subDays(2),
             'created_by' => $operator->id,
         ]);
 
         $s1->trackingEvents()->create([
             'event_type' => 'CHECKPOINT',
+            'status' => 'BOOKED',
+            'location_id' => $locationModels['BRSSZ']->id,
+            'location_name' => 'Santos Terminal 12 Bulk Silos',
+            'latitude' => -23.9678,
+            'longitude' => -46.2956,
+            'description' => '[PAYMENT GATEWAY SIMULATION] Real-time QRIS payment verified $1,358,000 USD. Ref: QRIS-2026-BRZ99120. Hold booked on MV Maersk Dry Bulk.',
+            'event_time' => $s1Departure->copy()->subDays(1),
+            'created_by' => $customer1->id,
+        ]);
+
+        $s1->trackingEvents()->create([
+            'event_type' => 'CHECKPOINT',
             'status' => 'PICKED_UP',
-            'location_id' => $locationModels['IDTPP']->id,
-            'location_name' => 'Tanjung Priok Container Terminal 3',
-            'latitude' => -5.9800,
-            'longitude' => 106.8800,
-            'description' => 'Cargo received and container sealed on vessel MV Maersk Mc-Kinney Moller.',
+            'location_id' => $locationModels['BRSSZ']->id,
+            'location_name' => 'Santos Loading Berth 4',
+            'latitude' => -23.9678,
+            'longitude' => -46.2956,
+            'description' => 'Loading 28,000 MT corn completed into 5 holds. Phyto-sanitary inspection passed.',
             'event_time' => $s1Departure,
             'created_by' => $operator->id,
         ]);
@@ -275,116 +301,76 @@ class DatabaseSeeder extends Seeder
             'event_type' => 'CHECKPOINT',
             'status' => 'IN_TRANSIT',
             'location_id' => null,
-            'location_name' => 'Sunda Strait Sea Corridor',
-            'latitude' => -5.9200,
-            'longitude' => 105.8500,
-            'description' => 'Vessel exited Sunda Strait heading northwest towards Singapore Strait.',
-            'event_time' => $s1Departure->copy()->addHours(14),
+            'location_name' => 'South Atlantic Shipping Corridor',
+            'latitude' => -30.0000,
+            'longitude' => -25.0000,
+            'description' => 'Steaming eastward at 14.5 knots towards Cape of Good Hope.',
+            'event_time' => $s1Departure->copy()->addDays(3),
             'created_by' => $operator->id,
-        ]);
-
-        $s1->trackingEvents()->create([
-            'event_type' => 'CHECKPOINT',
-            'status' => 'IN_TRANSIT',
-            'location_id' => $locationModels['SGSIN']->id,
-            'location_name' => 'Port of Singapore (Pasir Panjang)',
-            'latitude' => 1.2750,
-            'longitude' => 103.7800,
-            'description' => 'Vessel docked for scheduled feeder container transfers.',
-            'event_time' => $s1Departure->copy()->addDays(2),
-            'created_by' => $operator->id,
-        ]);
-
-        $ex1Event = $s1->trackingEvents()->create([
-            'event_type' => 'EXCEPTION_FLAG',
-            'status' => 'IN_TRANSIT',
-            'location_id' => $locationModels['SGSIN']->id,
-            'location_name' => 'Singapore Customs Anchorage East',
-            'latitude' => 1.2400,
-            'longitude' => 103.8800,
-            'description' => '[EXCEPTION: CUSTOMS_HOLD] Declaration discrepancy on lithium battery documentation.',
-            'event_time' => $now->copy()->subHours(18),
-            'created_by' => $operator->id,
-        ]);
-
-        $s1->exceptions()->create([
-            'tracking_event_id' => $ex1Event->id,
-            'exception_type' => ShipmentException::TYPE_CUSTOMS_HOLD,
-            'severity' => 'HIGH',
-            'status' => ShipmentException::STATUS_INVESTIGATING,
-            'description' => 'Customs authority requested supplementary MSDS battery certification.',
-            'detected_at' => $now->copy()->subHours(18),
-            'resolution_notes' => 'Forwarder requested revised MSDS from manufacturer; awaiting validation.',
         ]);
 
         $s1->trackingEvents()->create([
             'event_type' => 'CHECKPOINT',
             'status' => 'IN_TRANSIT',
             'location_id' => null,
-            'location_name' => 'Malacca Strait Sea Lane (Underway)',
-            'latitude' => 2.8500,
-            'longitude' => 101.2000,
-            'description' => 'Documentation cleared for transit; vessel steaming speed 19.4 knots heading to Indian Ocean.',
-            'event_time' => $now->copy()->subHours(3),
+            'location_name' => 'Cape of Good Hope Sea Corridor (Active Live Position)',
+            'latitude' => -35.5000,
+            'longitude' => 18.5000,
+            'description' => '[LIVE WEATHER IMPACT] Wind speed 42 km/h. Sea swell encountered. Speed adjusted to 11.8 knots (+8h delay impact).',
+            'event_time' => $now->copy()->subHours(4),
             'created_by' => $operator->id,
         ]);
 
-        // Scenario 2: Group B (Asia -> North America: Shanghai to Los Angeles) - Weather Delay
-        $s2Departure = $now->copy()->subDays(4);
-        $s2ExpectedArrival = $now->copy()->addDays(8);
-        $s2EstimatedArrival = $now->copy()->addDays(8)->addHours(14); // Delayed by 14h (MEDIUM severity)
+        // Scenario 2: Wheat (Fremantle, Australia -> Tanjung Priok, Indonesia) - On-Time & Delivered!
+        $s2Departure = $now->copy()->subDays(10);
+        $s2ExpectedArrival = $now->copy()->subDays(1);
 
         $s2 = Shipment::create([
-            'shipment_number' => 'CT-2026-USA02',
-            'customer_id' => $customer2->id,
-            'carrier_id' => $carrierModels['EVG']->id,
-            'origin_id' => $locationModels['CNSHG']->id,
-            'destination_id' => $locationModels['USLAX']->id,
-            'current_location_id' => null,
-            'cargo_type' => 'Industrial Solar Panels & Inverters',
-            'weight' => 24800.00,
-            'volume' => 78.00,
+            'shipment_number' => 'CT-2026-WHT02',
+            'customer_id' => $customer1->id,
+            'carrier_id' => $carrierModels['MSC']->id,
+            'origin_id' => $locationModels['AUFRE']->id,
+            'destination_id' => $locationModels['IDTPP']->id,
+            'current_location_id' => $locationModels['IDTPP']->id,
+            'cargo_type' => 'Wheat',
+            'weight' => 32000.00,
+            'volume' => 42000.00,
             'expected_departure' => $s2Departure,
             'expected_arrival' => $s2ExpectedArrival,
             'actual_departure' => $s2Departure,
-            'estimated_arrival' => $s2EstimatedArrival,
-            'current_status' => Shipment::STATUS_IN_TRANSIT,
-            'delay_status' => 'DELAYED',
-            'delay_duration_hours' => 14,
-            'delay_severity' => 'MEDIUM',
-            'delay_reason' => 'Vessel speed reduced due to North Pacific gale weather front.',
-            'notes' => 'Commercial installation consignment.',
+            'actual_arrival' => $s2ExpectedArrival->copy()->subHours(6),
+            'estimated_arrival' => $s2ExpectedArrival,
+            'current_status' => Shipment::STATUS_DELIVERED,
+            'delay_status' => 'ON_TIME',
+            'delay_duration_hours' => 0,
+            'delay_severity' => 'NONE',
+            'delay_reason' => 'Delivered 6 hours ahead of scheduled berthing window.',
+            'payment_status' => 'PAID',
+            'payment_method' => 'LETTER_OF_CREDIT',
+            'payment_reference' => 'LC-ANZ-2026-00412',
+            'freight_charge_usd' => 960000.00,
+            'notes' => 'Australian Hard Wheat (APW) for flour mill silo storage.',
         ]);
 
         $s2->items()->create([
-            'item_description' => 'Tier-1 Monocrystalline Solar Panels',
-            'quantity' => 450,
-            'weight' => 24800.00,
-            'volume' => 78.00,
-            'hs_code' => '8541.40.10',
-            'package_type' => 'CONTAINER_40FT',
-        ]);
-
-        $s2->trackingEvents()->create([
-            'event_type' => 'STATUS_UPDATE',
-            'status' => 'CREATED',
-            'location_id' => $locationModels['CNSHG']->id,
-            'location_name' => $locationModels['CNSHG']->name,
-            'latitude' => 30.6274,
-            'longitude' => 122.0642,
-            'description' => 'Consignment booked with carrier Evergreen Marine Corp.',
-            'event_time' => $s2Departure->copy()->subDays(1),
-            'created_by' => $operator->id,
+            'item_description' => 'Australian Premium White Wheat (APW1)',
+            'grade_specification' => 'Protein 10.5% Min, Moisture 12.0% Max',
+            'quantity' => 1,
+            'weight' => 32000.00,
+            'volume' => 42000.00,
+            'moisture_content_percent' => 11.40,
+            'hs_code' => '1001.99.10',
+            'package_type' => 'BULK_VESSEL_HOLD',
         ]);
 
         $s2->trackingEvents()->create([
             'event_type' => 'CHECKPOINT',
             'status' => 'PICKED_UP',
-            'location_id' => $locationModels['CNSHG']->id,
-            'location_name' => 'Shanghai Yangshan Deepwater Terminal Phase 4',
-            'latitude' => 30.6274,
-            'longitude' => 122.0642,
-            'description' => 'Loaded aboard MV Ever Given for Pacific Trans-load route.',
+            'location_id' => $locationModels['AUFRE']->id,
+            'location_name' => 'Kwinana Grain Jetty CBH Silos',
+            'latitude' => -32.0569,
+            'longitude' => 115.7439,
+            'description' => 'Vessel laden with 32,000 MT wheat. Draft inspection confirmed.',
             'event_time' => $s2Departure,
             'created_by' => $operator->id,
         ]);
@@ -393,91 +379,76 @@ class DatabaseSeeder extends Seeder
             'event_type' => 'CHECKPOINT',
             'status' => 'IN_TRANSIT',
             'location_id' => null,
-            'location_name' => 'East China Sea - Osumi Strait Corridor',
-            'latitude' => 30.5000,
-            'longitude' => 130.5000,
-            'description' => 'Navigating through Osumi Strait, entered open North Pacific shipping fairway.',
-            'event_time' => $s2Departure->copy()->addDays(1),
+            'location_name' => 'Eastern Indian Ocean Maritime Route',
+            'latitude' => -20.0000,
+            'longitude' => 110.0000,
+            'description' => 'Cruising northward under calm tropical ocean conditions at 15.2 knots.',
+            'event_time' => $s2Departure->copy()->addDays(4),
             'created_by' => $operator->id,
         ]);
 
         $s2->trackingEvents()->create([
             'event_type' => 'CHECKPOINT',
-            'status' => 'IN_TRANSIT',
-            'location_id' => null,
-            'location_name' => 'North Pacific Great Circle Waypoint Alpha',
-            'latitude' => 38.5000,
-            'longitude' => 155.0000,
-            'description' => 'Steaming at 20.8 knots heading towards International Date Line.',
-            'event_time' => $s2Departure->copy()->addDays(2)->addHours(12),
+            'status' => 'DELIVERED',
+            'location_id' => $locationModels['IDTPP']->id,
+            'location_name' => 'Tanjung Priok Bogasari Flour Mill Jetty',
+            'latitude' => -6.1038,
+            'longitude' => 106.8837,
+            'description' => 'Pneumatic unloader discharge completed. Consignment accepted by customer.',
+            'event_time' => $s2ExpectedArrival->copy()->subHours(6),
             'created_by' => $operator->id,
         ]);
 
-        $s2ExEvent = $s2->trackingEvents()->create([
-            'event_type' => 'EXCEPTION_FLAG',
-            'status' => 'IN_TRANSIT',
-            'location_id' => null,
-            'location_name' => 'North Pacific Oceanic Storm Front (Mid-Pacific)',
-            'latitude' => 41.5000,
-            'longitude' => 178.0000,
-            'description' => '[EXCEPTION: WEATHER_DELAY] Severe oceanic gale and 7-meter swells. Speed reduced to 11.2 knots for container safety.',
-            'event_time' => $now->copy()->subHours(6),
-            'created_by' => $operator->id,
-        ]);
-
-        $s2->exceptions()->create([
-            'tracking_event_id' => $s2ExEvent->id,
-            'exception_type' => ShipmentException::TYPE_WEATHER_DELAY,
-            'severity' => 'MEDIUM',
-            'status' => ShipmentException::STATUS_OPEN,
-            'description' => 'Gale-force headwinds in mid-Pacific causing 14h ETA slip to Port of Los Angeles.',
-            'detected_at' => $now->copy()->subHours(6),
-        ]);
-
-        // Scenario 3: Group C (Southeast Asia -> Australia: Jakarta to Sydney) - On-Time & Delivered!
-        $s3Departure = $now->copy()->subDays(12);
-        $s3ExpectedArrival = $now->copy()->subDays(2);
+        // Scenario 3: Soybeans (New Orleans, USA -> Qingdao, China via Panama) - Delayed due to Weather
+        $s3Departure = $now->copy()->subDays(6);
+        $s3ExpectedArrival = $now->copy()->addDays(20);
+        $s3EstimatedArrival = $now->copy()->addDays(21)->addHours(4); // +28h delay (HIGH)
 
         $s3 = Shipment::create([
-            'shipment_number' => 'CT-2026-AUS03',
-            'customer_id' => $customer1->id,
-            'carrier_id' => $carrierModels['MSC']->id,
-            'origin_id' => $locationModels['IDTPP']->id,
-            'destination_id' => $locationModels['AUSYD']->id,
-            'current_location_id' => $locationModels['AUSYD']->id,
-            'cargo_type' => 'Processed Organic Arabica Coffee Beans',
-            'weight' => 19200.00,
-            'volume' => 52.00,
+            'shipment_number' => 'CT-2026-SOY03',
+            'customer_id' => $customer2->id,
+            'carrier_id' => $carrierModels['EVG']->id,
+            'origin_id' => $locationModels['USMSY']->id,
+            'destination_id' => $locationModels['CNTAO']->id,
+            'current_location_id' => null,
+            'cargo_type' => 'Soybeans',
+            'weight' => 54000.00, // Panamax bulk load
+            'volume' => 71500.00,
             'expected_departure' => $s3Departure,
             'expected_arrival' => $s3ExpectedArrival,
             'actual_departure' => $s3Departure,
-            'actual_arrival' => $s3ExpectedArrival->copy()->subHours(4),
-            'estimated_arrival' => $s3ExpectedArrival,
-            'current_status' => Shipment::STATUS_DELIVERED,
-            'delay_status' => 'ON_TIME',
-            'delay_duration_hours' => 0,
-            'delay_severity' => 'NONE',
-            'delay_reason' => 'Delivered 4 hours ahead of schedule.',
-            'notes' => 'Temperature-controlled reefer container.',
+            'estimated_arrival' => $s3EstimatedArrival,
+            'current_status' => Shipment::STATUS_IN_TRANSIT,
+            'delay_status' => 'DELAYED',
+            'delay_duration_hours' => 28,
+            'delay_severity' => 'HIGH',
+            'delay_reason' => 'Delay of 28h: Severe gale winds & rough sea state in mid-Pacific wake.',
+            'payment_status' => 'PAID',
+            'payment_method' => 'LETTER_OF_CREDIT',
+            'payment_reference' => 'LC-CITI-2026-88091',
+            'freight_charge_usd' => 2862000.00,
+            'notes' => 'US Yellow Soybeans #2 for crush plant delivery in Shandong.',
         ]);
 
         $s3->items()->create([
-            'item_description' => 'Sumatra Gayo Grade 1 Green Coffee',
-            'quantity' => 320,
-            'weight' => 19200.00,
-            'volume' => 52.00,
-            'hs_code' => '0901.11.10',
-            'package_type' => 'GRAINPRO_BAGS',
+            'item_description' => 'US No. 2 Yellow Soybeans (GMO Bulk)',
+            'grade_specification' => 'Oil Content 18.5% Min, Moisture 13.0% Max',
+            'quantity' => 1,
+            'weight' => 54000.00,
+            'volume' => 71500.00,
+            'moisture_content_percent' => 12.50,
+            'hs_code' => '1201.90.00',
+            'package_type' => 'BULK_VESSEL_HOLD',
         ]);
 
         $s3->trackingEvents()->create([
             'event_type' => 'CHECKPOINT',
             'status' => 'PICKED_UP',
-            'location_id' => $locationModels['IDTPP']->id,
-            'location_name' => $locationModels['IDTPP']->name,
-            'latitude' => -6.1038,
-            'longitude' => 106.8837,
-            'description' => 'Container sealed at origin export facility.',
+            'location_id' => $locationModels['USMSY']->id,
+            'location_name' => 'Mississippi River Bulk Silo Complex',
+            'latitude' => 29.9511,
+            'longitude' => -90.0715,
+            'description' => 'Loaded aboard bulk carrier MV Evergreen Bulk. Draft surveyed.',
             'event_time' => $s3Departure,
             'created_by' => $operator->id,
         ]);
@@ -486,120 +457,110 @@ class DatabaseSeeder extends Seeder
             'event_type' => 'CHECKPOINT',
             'status' => 'IN_TRANSIT',
             'location_id' => null,
-            'location_name' => 'Lombok Strait Maritime Passage',
-            'latitude' => -8.7500,
-            'longitude' => 115.3000,
-            'description' => 'Transited Lombok Strait safely into southern Indian Ocean.',
-            'event_time' => $s3Departure->copy()->addDays(2),
+            'location_name' => 'Panama Canal Transit Channel',
+            'latitude' => 8.5000,
+            'longitude' => -79.5000,
+            'description' => 'Exited Miraflores Locks entering Pacific ocean track.',
+            'event_time' => $s3Departure->copy()->addDays(3),
             'created_by' => $operator->id,
         ]);
 
-        $s3->trackingEvents()->create([
-            'event_type' => 'CHECKPOINT',
+        $s3ExEvent = $s3->trackingEvents()->create([
+            'event_type' => 'EXCEPTION_FLAG',
             'status' => 'IN_TRANSIT',
             'location_id' => null,
-            'location_name' => 'Coral Sea Maritime Lane',
-            'latitude' => -16.0000,
-            'longitude' => 146.5000,
-            'description' => 'Cruising eastern Australian seaboard under clear weather conditions.',
-            'event_time' => $s3Departure->copy()->addDays(7),
+            'location_name' => 'East Pacific Tropical Fairway (Current Live Position)',
+            'latitude' => 12.0000,
+            'longitude' => -110.0000,
+            'description' => '[EXCEPTION: WEATHER_DELAY] Tropical disturbance winds 58 km/h. Speed reduced to 10.2 knots (+28h ETA impact).',
+            'event_time' => $now->copy()->subHours(6),
             'created_by' => $operator->id,
         ]);
 
-        $s3->trackingEvents()->create([
-            'event_type' => 'CHECKPOINT',
-            'status' => 'IN_TRANSIT',
-            'location_id' => $locationModels['AUSYD']->id,
-            'location_name' => 'Port Botany Sydney Terminal 3',
-            'latitude' => -33.9500,
-            'longitude' => 151.2200,
-            'description' => 'Vessel berthed at Port Botany, discharge operations commenced.',
-            'event_time' => $s3ExpectedArrival->copy()->subHours(8),
-            'created_by' => $operator->id,
+        $s3->exceptions()->create([
+            'tracking_event_id' => $s3ExEvent->id,
+            'exception_type' => ShipmentException::TYPE_WEATHER_DELAY,
+            'severity' => 'HIGH',
+            'status' => ShipmentException::STATUS_OPEN,
+            'description' => 'Severe weather front in East Pacific forcing routing detour and speed slowdown.',
+            'detected_at' => $now->copy()->subHours(6),
         ]);
 
-        $s3->trackingEvents()->create([
-            'event_type' => 'CHECKPOINT',
-            'status' => 'DELIVERED',
-            'location_id' => $locationModels['AUSYD']->id,
-            'location_name' => 'Sydney Central Roastery Distribution Hub',
-            'latitude' => -33.8688,
-            'longitude' => 151.2093,
-            'description' => 'Consignment signed and received in good condition by Sydney Roasting Co.',
-            'event_time' => $s3ExpectedArrival->copy()->subHours(4),
-            'created_by' => $operator->id,
-        ]);
-
-        // Scenario 4: Fast Air Freight (Jakarta to Hamburg via SIA) - BOOKED
+        // Scenario 4: Rice (Bangkok, Thailand -> Tanjung Perak, Surabaya, Indonesia) - Booked & Loading
         $s4 = Shipment::create([
-            'shipment_number' => 'CT-2026-AIR04',
+            'shipment_number' => 'CT-2026-RIC04',
             'customer_id' => $customer2->id,
-            'carrier_id' => $carrierModels['SIA']->id,
-            'origin_id' => $locationModels['IDTPP']->id,
-            'destination_id' => $locationModels['DEHAM']->id,
-            'current_location_id' => $locationModels['IDTPP']->id,
-            'cargo_type' => 'Pharmaceutical Vaccines (Cold Chain)',
-            'weight' => 2200.00,
-            'volume' => 8.50,
-            'expected_departure' => $now->copy()->addDay(),
-            'expected_arrival' => $now->copy()->addDays(3),
-            'estimated_arrival' => $now->copy()->addDays(3),
+            'carrier_id' => $carrierModels['CMA']->id,
+            'origin_id' => $locationModels['THBKK']->id,
+            'destination_id' => $locationModels['IDSUB']->id,
+            'current_location_id' => $locationModels['THBKK']->id,
+            'cargo_type' => 'Rice',
+            'weight' => 12500.00,
+            'volume' => 16500.00,
+            'expected_departure' => $now->copy()->addDays(2),
+            'expected_arrival' => $now->copy()->addDays(8),
+            'estimated_arrival' => $now->copy()->addDays(8),
             'current_status' => Shipment::STATUS_BOOKED,
             'delay_status' => 'ON_TIME',
             'delay_duration_hours' => 0,
             'delay_severity' => 'NONE',
-            'delay_reason' => 'Scheduled air corridor confirmed.',
-            'notes' => 'Constant -20C required.',
+            'delay_reason' => 'Vessel berthing schedule on track at Laem Chabang terminal.',
+            'payment_status' => 'PAID',
+            'payment_method' => 'VIRTUAL_ACCOUNT',
+            'payment_reference' => 'VA-BNI-2026-55310',
+            'freight_charge_usd' => 375000.00,
+            'notes' => 'Thai Hom Mali Jasmine Rice (Jumbo Bags). Stored in climate-monitored hold.',
         ]);
 
         $s4->items()->create([
-            'item_description' => 'Lyophilized Biological Formulations',
-            'quantity' => 40,
-            'weight' => 2200.00,
-            'volume' => 8.50,
-            'hs_code' => '3002.20.00',
-            'package_type' => 'INSULATED_BOX',
+            'item_description' => 'Thai Fragrant Rice 100% Grade A',
+            'grade_specification' => 'Broken 5% Max, Moisture 14.0% Max',
+            'quantity' => 12500,
+            'weight' => 12500.00,
+            'volume' => 16500.00,
+            'moisture_content_percent' => 13.50,
+            'hs_code' => '1006.30.40',
+            'package_type' => 'JUMBO_BAGS',
         ]);
 
         $s4->trackingEvents()->create([
             'event_type' => 'STATUS_UPDATE',
             'status' => 'BOOKED',
-            'location_id' => $locationModels['IDTPP']->id,
-            'location_name' => 'Jakarta Air Cargo Center',
-            'latitude' => -6.1256,
-            'longitude' => 106.6558,
-            'description' => 'Airway bill issued; flight space allocated.',
-            'event_time' => $now->copy()->subHours(4),
+            'location_id' => $locationModels['THBKK']->id,
+            'location_name' => 'Laem Chabang Port Complex',
+            'latitude' => 13.0827,
+            'longitude' => 100.8833,
+            'description' => 'Consignment booked with carrier CMA CGM Bulk. Jumbo bags staged at warehouse.',
+            'event_time' => $now->copy()->subHours(12),
             'created_by' => $operator->id,
         ]);
-
         // 5. Create In-App Notifications
         Notification::create([
             'user_id' => $customer1->id,
-            'title' => 'Disruption Reported: CT-2026-EUR01',
-            'message' => 'Customs check hold flagged at Port of Singapore. Estimated arrival revised.',
-            'type' => 'danger',
+            'title' => 'Bulk Grain Booking Paid: CT-2026-CRN01',
+            'message' => 'Simulated QRIS payment confirmed ($1,358,000 USD). Vessel MV Maersk Dry Bulk en route Santos to Tanjung Priok.',
+            'type' => 'success',
             'is_read' => false,
             'link' => "/shipments/{$s1->id}",
         ]);
 
         Notification::create([
             'user_id' => $customer1->id,
-            'title' => 'Shipment Delivered: CT-2026-AUS03',
-            'message' => 'Your shipment of Arabica Coffee has been safely delivered in Sydney.',
+            'title' => 'Wheat Consignment Delivered: CT-2026-WHT02',
+            'message' => 'Australian Premium Wheat safely discharged at Bogasari Grain Silos, Tanjung Priok.',
             'type' => 'success',
             'is_read' => true,
             'read_at' => $now->copy()->subDays(1),
-            'link' => "/shipments/{$s3->id}",
+            'link' => "/shipments/{$s2->id}",
         ]);
 
         Notification::create([
             'user_id' => $customer2->id,
-            'title' => 'Transit Delay Warning: CT-2026-USA02',
-            'message' => 'Vessel has adjusted navigation speed due to North Pacific weather front.',
+            'title' => 'Severe Weather Alert: CT-2026-SOY03',
+            'message' => 'Gale-force ocean front encountered in East Pacific. Automated delay engine computed +28h ETA adjustment.',
             'type' => 'warning',
             'is_read' => false,
-            'link' => "/shipments/{$s2->id}",
+            'link' => "/shipments/{$s3->id}",
         ]);
 
         // 6. Create Audit Logs

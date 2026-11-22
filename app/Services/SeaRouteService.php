@@ -14,31 +14,66 @@ class SeaRouteService
 
         // Predefined realistic corridors
         $corridors = [
-            // Route 1: Jakarta (Tanjung Priok) -> Rotterdam
-            'IDTPP_NLRTM' => [
-                [-6.1038, 106.8837, 'Tanjung Priok, Jakarta'],
+            // Route 1: Santos, Brazil -> Tanjung Priok, Jakarta (South Atlantic -> Cape of Good Hope -> Indian Ocean -> Sunda Strait)
+            'BRSSZ_IDTPP' => [
+                [-23.9678, -46.2956, 'Port of Santos (Brazil) - Loading Silos'],
+                [-25.5000, -42.0000, 'South Atlantic Brazilian Coastal Fairway'],
+                [-30.0000, -25.0000, 'South Atlantic Trans-oceanic Corridor Alpha'],
+                [-34.5000, 0.0000, 'Mid-Atlantic Southern Shipping Lane'],
+                [-35.5000, 18.5000, 'Cape of Good Hope Oceanic Channel'],
+                [-32.0000, 45.0000, 'South Indian Ocean Transit Waypoint 1'],
+                [-20.0000, 75.0000, 'Central Indian Ocean Bulk Fairway'],
+                [-10.0000, 95.0000, 'Cocos / Keeling Oceanic Approach'],
+                [-6.5000, 104.5000, 'Sunda Strait Western Sea Approach'],
                 [-5.9200, 105.8500, 'Sunda Strait Corridor'],
-                [-1.0000, 104.5000, 'Bangka Strait Northbound'],
-                [1.2750, 103.7800, 'Singapore Strait / Port of Singapore'],
-                [2.8500, 101.2000, 'Malacca Strait Central Channel'],
-                [5.9500, 95.2000, 'Aceh / Andaman Sea Corridor'],
-                [5.8000, 80.5000, 'South Sri Lanka Shipping Lane'],
-                [11.5000, 60.0000, 'Arabian Sea Crossing'],
-                [12.5000, 50.8000, 'Gulf of Aden Transit Corridor'],
-                [12.6000, 43.5000, 'Bab-el-Mandeb Strait'],
-                [20.0000, 38.5000, 'Red Sea Shipping Channel'],
-                [27.8000, 34.2000, 'Gulf of Suez Approaches'],
-                [29.9500, 32.5500, 'Suez Canal / Port Said'],
-                [35.0000, 24.5000, 'Mediterranean Sea South of Crete'],
-                [37.2000, 11.5000, 'Strait of Sicily'],
-                [36.1000, -5.3500, 'Strait of Gibraltar'],
-                [43.5000, -9.5000, 'Cape Finisterre Atlantic Channel'],
-                [48.5000, -5.0000, 'English Channel Western Approaches'],
-                [50.5000, 0.0000, 'Strait of Dover Channel'],
-                [51.9054, 4.3160, 'Port of Rotterdam'],
+                [-6.1038, 106.8837, 'Tanjung Priok Port (Jakarta, Indonesia)'],
             ],
 
-            // Route 2: Shanghai (Yangshan) -> Los Angeles (Transpacific Great Circle)
+            // Route 2: Fremantle / Dampier, Australia -> Tanjung Priok, Jakarta (Wheat Route)
+            'AUFRE_IDTPP' => [
+                [-32.0569, 115.7439, 'Port of Fremantle (Perth, Australia)'],
+                [-28.0000, 112.5000, 'Western Australian Coastal Fairway'],
+                [-20.0000, 110.0000, 'Eastern Indian Ocean Northwest Track'],
+                [-12.0000, 108.5000, 'Christmas Island Approach'],
+                [-6.5000, 106.0000, 'Java Sea Southwestern Entrance'],
+                [-6.1038, 106.8837, 'Tanjung Priok Port (Jakarta, Indonesia)'],
+            ],
+
+            // Route 3: New Orleans, USA -> Qingdao, China (Soybeans Route via Atlantic, Mediterranean, Suez & Malacca)
+            'USMSY_CNTAO' => [
+                [29.9511, -90.0715, 'Port of New Orleans / Mississippi Gulf (USA)'],
+                [24.5000, -82.0000, 'Florida Straits Eastbound Channel'],
+                [28.0000, -70.0000, 'North Atlantic Deepwater Track'],
+                [32.0000, -45.0000, 'Mid-Atlantic Grain Shipping Corridor'],
+                [35.0000, -20.0000, 'Azores Offshore Fairway'],
+                [36.0000, -6.0000, 'Strait of Gibraltar Gateway'],
+                [36.5000, 12.0000, 'Mediterranean Central Deep Basin'],
+                [32.0000, 31.5000, 'Suez Canal Approach (Port Said)'],
+                [27.5000, 34.0000, 'Gulf of Suez & Red Sea Corridor'],
+                [13.0000, 43.5000, 'Bab el-Mandeb Strait Gateway'],
+                [12.0000, 52.0000, 'Gulf of Aden / Socotra Fairway'],
+                [7.0000, 78.0000, 'South Sri Lanka Maritime Highway'],
+                [5.5000, 95.0000, 'Malacca Strait Western Approach'],
+                [2.5000, 101.5000, 'Malacca Strait Main Corridor'],
+                [1.3000, 104.2000, 'Singapore Strait Transit'],
+                [12.0000, 112.5000, 'South China Sea Oceanic Fairway'],
+                [22.0000, 120.0000, 'Taiwan Strait Eastbound Corridor'],
+                [31.0000, 122.8000, 'East China Sea Shipping Lane'],
+                [36.0671, 120.3826, 'Port of Qingdao (China)'],
+            ],
+
+            // Route 4: Bangkok / Laem Chabang, Thailand -> Tanjung Perak, Surabaya, Indonesia (Rice Route)
+            'THBKK_IDSUB' => [
+                [13.0827, 100.8833, 'Port of Laem Chabang / Bangkok (Thailand)'],
+                [9.0000, 102.5000, 'Gulf of Thailand Central Fairway'],
+                [4.5000, 104.5000, 'South China Sea / Natuna Sea Passage'],
+                [1.5000, 105.0000, 'Singapore Strait Eastern Approaches'],
+                [-1.5000, 106.5000, 'Karimata Strait Corridor'],
+                [-4.5000, 110.0000, 'Java Sea Central Fairway'],
+                [-7.1982, 112.7335, 'Tanjung Perak Port (Surabaya, Indonesia)'],
+            ],
+
+            // Route 2: Shanghai (Yangshan) -> Los Angeles (Transpacific Great Circle - Eastbound)
             'CNSHG_USLAX' => [
                 [30.6274, 122.0642, 'Shanghai Yangshan Port'],
                 [31.5000, 126.0000, 'East China Sea Exit'],
@@ -46,11 +81,11 @@ class SeaRouteService
                 [34.0000, 142.0000, 'Off Honshu East Pacific Track'],
                 [38.5000, 155.0000, 'North Pacific Great Circle Waypoint 1'],
                 [42.0000, 170.0000, 'North Pacific Central Track'],
-                [43.0000, -175.0000, 'International Date Line Corridor'],
-                [41.5000, -160.0000, 'Gulf of Alaska Southern Waypoint'],
-                [37.0000, -135.0000, 'California Current Approach'],
-                [34.2000, -121.5000, 'Point Conception Approaches'],
-                [33.7432, -118.2673, 'Port of Los Angeles'],
+                [43.0000, 185.0000, 'International Date Line Corridor Eastbound'],
+                [41.5000, 200.0000, 'Gulf of Alaska Southern Waypoint'],
+                [37.0000, 225.0000, 'California Current Approach'],
+                [34.2000, 238.5000, 'Point Conception Approaches'],
+                [33.7432, 241.7327, 'Port of Los Angeles'],
             ],
 
             // Route 3: Jakarta -> Sydney (Via Java Sea, Bali Strait, Timor Sea, Tasman Sea)

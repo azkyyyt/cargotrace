@@ -292,6 +292,106 @@ class ShipmentController extends Controller
         return redirect()->route('shipments.show', $shipment->id)->with('success', "Shipment status transitioned to {$validated['target_status']}.");
     }
 
+    /**
+     * Customer Grain Cargo Booking (Wheat, Corn, Soybeans, Rice)
+     */
+    public function bookGrain(Request $request)
+    {
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'cargo_type' => ['required', 'in:Wheat,Corn,Soybeans,Rice'],
+            'carrier_id' => ['required', 'exists:carriers,id'],
+            'origin_id' => ['required', 'exists:locations,id'],
+            'destination_id' => ['required', 'exists:locations,id', 'different:origin_id'],
+            'weight' => ['required', 'numeric', 'min:100'], // Tonase
+            'grade_specification' => ['nullable', 'string', 'max:255'],
+            'payment_method' => ['required', 'in:QRIS_REALTIME,VIRTUAL_ACCOUNT,LETTER_OF_CREDIT,CREDIT_CARD'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $shipment = $this->shipmentService->createGrainBooking($validated, $user);
+
+        return redirect()->route('shipments.show', $shipment->id)->with('success', "Grain consignment {$shipment->shipment_number} ordered! Proceed with simulated payment.");
+    }
+
+    /**
+     * Real-Time Simulated Payment Gateway Processor
+     */
+    public function simulatePayment(Request $request, int $id)
+    {
+        $user = Auth::user();
+        $shipment = Shipment::findOrFail($id);
+
+        if ($user->isCustomer() && (int) $shipment->customer_id !== (int) $user->id) {
+            abort(403, 'Unauthorized.');
+        }
+
+        $validated = $request->validate([
+            'payment_method' => ['required', 'string', 'in:QRIS_REALTIME,VIRTUAL_ACCOUNT,LETTER_OF_CREDIT,CREDIT_CARD'],
+        ]);
+
+        $this->shipmentService->processSimulatedPayment($shipment, $validated['payment_method'], $user);
+
+        return redirect()->route('shipments.show', $shipment->id)->with('success', "Real-Time Payment Verified! Shipment {$shipment->shipment_number} is now BOOKED and allocated to the ocean corridor.");
+    }
+
+    /**
+     * Live Weather Evaluation Trigger:
+     * Reads current oceanic conditions and automatically computes delay hours + flags WEATHER_DELAY if adverse.
+     */
+    public function checkWeatherImpact(int $id)
+    {
+        $user = Auth::user();
+        $shipment = Shipment::with(['origin', 'destination', 'trackingEvents'])->findOrFail($id);
+
+        if ($user->isCustomer() && (int) $shipment->customer_id !== (int) $user->id) {
+            abort(403, 'Unauthorized.');
+        }
+
+        // Get latest coordinates or origin coordinates
+        $latestEvent = $shipment->trackingEvents->whereNotNull('latitude')->whereNotNull('longitude')->last();
+        $lat = $latestEvent ? (float) $latestEvent->latitude : (float) ($shipment->origin?->latitude ?? 0);
+        $lon = $latestEvent ? (float) $latestEvent->longitude : (float) ($shipment->origin?->longitude ?? 0);
+
+        $weatherImpact = $this->externalApiService->calculateWeatherImpactHours($lat, $lon);
+
+        if ($weatherImpact['is_adverse']) {
+            $newEstimatedArrival = $shipment->expected_arrival->copy()->addHours($weatherImpact['delay_hours']);
+            $this->shipmentService->updateShipment($shipment, [
+                'estimated_arrival' => $newEstimatedArrival,
+            ], $user);
+
+            // Create exception if not already open
+            $hasWeatherEx = $shipment->exceptions()->where('exception_type', 'WEATHER_DELAY')->where('status', '!=', 'RESOLVED')->exists();
+            if (!$hasWeatherEx) {
+                $te = $shipment->trackingEvents()->create([
+                    'event_type' => 'EXCEPTION_FLAG',
+                    'status' => $shipment->current_status,
+                    'location_name' => "Oceanic Zone [{$lat}, {$lon}]",
+                    'latitude' => $lat,
+                    'longitude' => $lon,
+                    'description' => "[AUTOMATED LIVE WEATHER] {$weatherImpact['reason']}",
+                    'event_time' => now(),
+                    'created_by' => $user->id,
+                ]);
+
+                $shipment->exceptions()->create([
+                    'tracking_event_id' => $te->id,
+                    'exception_type' => 'WEATHER_DELAY',
+                    'severity' => $weatherImpact['severity'],
+                    'status' => 'OPEN',
+                    'description' => $weatherImpact['reason'],
+                    'detected_at' => now(),
+                ]);
+            }
+
+            return redirect()->route('shipments.show', $shipment->id)->with('warning', "Live Weather Alert: Wind {$weatherImpact['weather']['windspeed']} km/h. Automated Delay of +{$weatherImpact['delay_hours']}h applied to ETA.");
+        }
+
+        return redirect()->route('shipments.show', $shipment->id)->with('info', "Live Weather Check: Wind {$weatherImpact['weather']['windspeed']} km/h. Conditions favorable for bulk grain transit (0h delay).");
+    }
+
     public function destroy(int $id)
     {
         $user = Auth::user();

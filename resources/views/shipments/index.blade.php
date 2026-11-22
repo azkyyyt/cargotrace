@@ -96,8 +96,8 @@
                         <th class="py-3 px-4">Customer</th>
                         <th class="py-3 px-4">Lane (Origin &rarr; Destination)</th>
                         <th class="py-3 px-4">Carrier</th>
-                        <th class="py-3 px-4">Cargo / Weight</th>
-                        <th class="py-3 px-4">Current Status</th>
+                        <th class="py-3 px-4">Cargo / Commodity</th>
+                        <th class="py-3 px-4">Status &amp; Payment</th>
                         <th class="py-3 px-4">Delay State</th>
                         <th class="py-3 px-4 text-right">Actions</th>
                     </tr>
@@ -128,10 +128,22 @@
                                 <span class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-mono">{{ $s->carrier ? $s->carrier->transport_mode : '-' }}</span>
                             </td>
                             <td class="py-3.5 px-4">
-                                <div class="font-medium text-slate-900">{{ Str::limit($s->cargo_type, 24) }}</div>
-                                <div class="text-[10px] text-slate-500">{{ number_format($s->weight, 0) }} kg &bull; {{ $s->volume }} CBM</div>
+                                @php
+                                    $grainIcon = match(strtolower($s->cargo_type)) {
+                                        'wheat' => '🌾',
+                                        'corn' => '🌽',
+                                        'soybeans' => '🌱',
+                                        'rice' => '🍚',
+                                        default => '📦'
+                                    };
+                                @endphp
+                                <div class="font-bold text-slate-900 flex items-center space-x-1">
+                                    <span>{{ $grainIcon }}</span>
+                                    <span>{{ $s->cargo_type }}</span>
+                                </div>
+                                <div class="text-[10px] text-slate-500 font-mono">{{ number_format($s->weight / 1000, 1) }} MT &bull; ${{ number_format($s->freight_charge_usd ?? 0, 0) }}</div>
                             </td>
-                            <td class="py-3.5 px-4">
+                            <td class="py-3.5 px-4 space-y-1">
                                 @php
                                     $badgeClass = match($s->current_status) {
                                         'DELIVERED' => 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -142,9 +154,22 @@
                                         default => 'bg-amber-100 text-amber-800 border-amber-200',
                                     };
                                 @endphp
-                                <span class="px-2.5 py-1 rounded text-[10px] font-bold border {{ $badgeClass }}">
-                                    {{ $s->current_status }}
-                                </span>
+                                <div>
+                                    <span class="px-2.5 py-0.5 rounded text-[10px] font-bold border {{ $badgeClass }}">
+                                        {{ $s->current_status }}
+                                    </span>
+                                </div>
+                                <div>
+                                    @if($s->payment_status === 'PAID')
+                                        <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                            ✓ PAID ({{ $s->payment_method ? str_replace('_', ' ', $s->payment_method) : 'VERIFIED' }})
+                                        </span>
+                                    @else
+                                        <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200 animate-pulse">
+                                            ● AWAITING PAYMENT
+                                        </span>
+                                    @endif
+                                </div>
                             </td>
                             <td class="py-3.5 px-4">
                                 @if($s->delay_status === 'DELAYED')
