@@ -216,8 +216,41 @@
             </div>
         </div>
 
-        <!-- Map Canvas with Ocean Background -->
-        <div id="shipmentMap" class="w-full h-80 sm:h-96 rounded-xl border border-slate-300 shadow-inner z-10" style="background: #a5bfdd;"></div>
+        <!-- Map Canvas with Ocean Background and Live AIS Satellite Telemetry HUD -->
+        <div class="relative">
+            <div id="shipmentMap" class="w-full h-80 sm:h-96 rounded-xl border border-slate-300 shadow-inner z-10" style="background: #a5bfdd;"></div>
+            
+            <!-- Real-Time Floating AIS HUD -->
+            <div class="absolute bottom-3 left-3 right-3 sm:right-auto z-20 bg-slate-900/95 backdrop-blur-md text-white p-3 rounded-xl border border-white/20 shadow-xl flex flex-wrap items-center gap-3 text-xs">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="font-black text-sky-300 tracking-wider text-[11px] uppercase">LIVE AIS SATELLITE HUD</span>
+                </div>
+                <div class="h-4 w-px bg-slate-700 hidden sm:block"></div>
+                <div>
+                    <span class="text-slate-400 text-[10px] block">Steaming Speed</span>
+                    <span id="aisSpeedDisplay" class="font-mono font-bold text-amber-300">14.8 kts</span>
+                </div>
+                <div>
+                    <span class="text-slate-400 text-[10px] block">Course Bearing</span>
+                    <span id="aisHeadingDisplay" class="font-mono font-bold text-sky-300">112.3°</span>
+                </div>
+                <div class="max-w-[150px] truncate">
+                    <span class="text-slate-400 text-[10px] block">Navigational Fairway</span>
+                    <span id="aisSectorDisplay" class="font-bold text-slate-100 block truncate">Underway Transit</span>
+                </div>
+                <div>
+                    <span class="text-slate-400 text-[10px] block">Voyage Progress</span>
+                    <span id="aisProgressDisplay" class="font-mono font-bold text-emerald-300">42.5%</span>
+                </div>
+                <div class="flex items-center space-x-1 ml-auto">
+                    <button type="button" id="btnSpeed1x" class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-600 text-white hover:bg-sky-500 transition">1x Real</button>
+                    <button type="button" id="btnSpeed5x" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">5x Cruise</button>
+                    <button type="button" id="btnSpeed20x" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">20x Sim</button>
+                    <button type="button" id="btnPlayPause" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">⏸️</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Consignment Specs, Items, Timeline & Exceptions Grid -->
@@ -974,10 +1007,8 @@
             `);
         });
 
-        // 3. Draw Active Vessel Marker with Real Heading & Radar Pulse
+        // 3. Draw Active Vessel Marker with Real-Time Navigation Sailing Engine
         if (vessel && vessel.lat && vessel.lng) {
-            bounds.push([vessel.lat, vessel.lng]);
-
             let iconSymbol = vessel.transport_mode === 'AIR' ? '✈️' : '🚢';
             let pinColor = vessel.has_exception ? '#ef4444' : (vessel.status === 'DELIVERED' ? '#10b981' : '#0284c7');
             let heading = vessel.heading || 0;
@@ -985,10 +1016,10 @@
             const vesselHtml = `
                 <div style="position: relative; width: 46px; height: 46px; display: flex; align-items: center; justify-content: center;">
                     <div style="position: absolute; width: 40px; height: 40px; border-radius: 50%; background: ${pinColor}; opacity: 0.25; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-                    <div style="position: relative; width: 36px; height: 36px; background: ${pinColor}; border: 2.5px solid #ffffff; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; transform: rotate(${heading}deg); transition: transform 0.5s ease;">
+                    <div id="vesselCompassCard" style="position: relative; width: 36px; height: 36px; background: ${pinColor}; border: 2.5px solid #ffffff; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; transform: rotate(${heading}deg); transition: transform 0.2s linear;">
                         <span style="font-size: 16px; display: inline-block;">${iconSymbol}</span>
                     </div>
-                    <div style="position: absolute; top: 1px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 8px solid ${pinColor}; transform-origin: center 23px; transform: rotate(${heading}deg);"></div>
+                    <div id="vesselHeadingArrow" style="position: absolute; top: 1px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 8px solid ${pinColor}; transform-origin: center 23px; transform: rotate(${heading}deg); transition: transform 0.2s linear;"></div>
                     ${vessel.has_exception ? '<span style="position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; background: #dc2626; border: 2px solid white; border-radius: 50%; z-index: 20;"></span>' : ''}
                 </div>
             `;
@@ -1000,30 +1031,179 @@
                 iconAnchor: [23, 23]
             });
 
-            const vesselMarker = L.marker([vessel.lat, vessel.lng], { icon: vesselIcon, zIndexOffset: 1000 }).addTo(map);
+            // Initial position along corridor
+            let corridorWaypoints = (corridor && corridor.length > 1) ? corridor : [[vessel.lat, vessel.lng]];
+            
+            // Calculate segment distances for precise maritime interpolation
+            let totalDist = 0;
+            let segmentDists = [];
+            for (let i = 0; i < corridorWaypoints.length - 1; i++) {
+                const p1 = corridorWaypoints[i];
+                const p2 = corridorWaypoints[i + 1];
+                const d = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+                segmentDists.push(d);
+                totalDist += d;
+            }
+
+            function getCorridorPosition(prog) {
+                if (corridorWaypoints.length < 2 || prog <= 0) {
+                    return {
+                        lat: corridorWaypoints[0][0],
+                        lng: corridorWaypoints[0][1],
+                        heading: heading,
+                        sector: corridorWaypoints[0][2] || 'Origin'
+                    };
+                }
+                if (prog >= 1) {
+                    const last = corridorWaypoints[corridorWaypoints.length - 1];
+                    return {
+                        lat: last[0],
+                        lng: last[1],
+                        heading: heading,
+                        sector: last[2] || 'Destination'
+                    };
+                }
+                const target = prog * totalDist;
+                let acc = 0;
+                for (let i = 0; i < segmentDists.length; i++) {
+                    const segD = segmentDists[i];
+                    if (acc + segD >= target || i === segmentDists.length - 1) {
+                        const frac = segD > 0 ? (target - acc) / segD : 0;
+                        const p1 = corridorWaypoints[i];
+                        const p2 = corridorWaypoints[i + 1];
+                        const lat = p1[0] + frac * (p2[0] - p1[0]);
+                        const lng = p1[1] + frac * (p2[1] - p1[1]);
+                        
+                        // Precise Rhumb line bearing
+                        const φ1 = p1[0] * Math.PI / 180;
+                        const φ2 = p2[0] * Math.PI / 180;
+                        const Δλ = (p2[1] - p1[1]) * Math.PI / 180;
+                        const y = Math.sin(Δλ) * Math.cos(φ2);
+                        const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+                        const brg = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+
+                        return {
+                            lat: lat,
+                            lng: lng,
+                            heading: brg,
+                            sector: p1[2] || p2[2] || 'Oceanic Transit Fairway'
+                        };
+                    }
+                    acc += segD;
+                }
+                return { lat: vessel.lat, lng: vessel.lng, heading: heading, sector: 'Transit' };
+            }
+
+            // Determine starting progress (0.0 - 1.0)
+            let currentProg = (vessel.progress > 0) ? (vessel.progress > 1 ? vessel.progress / 100 : vessel.progress) : 0.38;
+            if (vessel.status === 'DELIVERED') currentProg = 1.0;
+            if (vessel.status === 'CREATED' || vessel.status === 'BOOKED') currentProg = 0.0;
+
+            const initialPos = getCorridorPosition(currentProg);
+            bounds.push([initialPos.lat, initialPos.lng]);
+
+            const vesselMarker = L.marker([initialPos.lat, initialPos.lng], { icon: vesselIcon, zIndexOffset: 1000 }).addTo(map);
 
             vesselMarker.bindPopup(`
-                <div style="font-family: inherit; font-size: 11px; line-height: 1.5; min-width: 200px;">
-                    <div style="font-weight: 800; color: #0f172a; font-size: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 4px;">
-                        Live Vessel Position &amp; Heading
+                <div style="font-family: inherit; font-size: 11px; line-height: 1.5; min-width: 210px;">
+                    <div style="font-weight: 800; color: #0f172a; font-size: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Live AIS Vessel Tracking</span>
+                        <span style="font-size: 9px; background: #e0f2fe; color: #0284c7; padding: 1px 5px; border-radius: 4px; font-weight: bold;">Real-Time</span>
                     </div>
                     <div><strong>Carrier:</strong> ${vessel.carrier_name}</div>
-                    <div><strong>Current Location:</strong> ${vessel.name}</div>
-                    <div><strong>Course / Bearing:</strong> <span style="font-family: monospace; font-weight: bold; color: #0284c7;">${vessel.heading}&deg; Course</span></div>
+                    <div><strong>Active Fairway:</strong> <span id="popupLiveSector">${initialPos.sector}</span></div>
+                    <div><strong>Position:</strong> <span id="popupLiveCoord" style="font-family: monospace;">[${initialPos.lat.toFixed(4)}, ${initialPos.lng.toFixed(4)}]</span></div>
+                    <div><strong>Course / Bearing:</strong> <span id="popupLiveHeading" style="font-family: monospace; font-weight: bold; color: #0284c7;">${initialPos.heading.toFixed(1)}&deg; True</span></div>
                     <div><strong>Current Status:</strong> <span style="font-weight: bold; color: ${pinColor};">${vessel.status}</span></div>
                 </div>
             `).openPopup();
 
-            // Subtle live engine vibration / wave drift animation
-            if (vessel.status === 'IN_TRANSIT') {
-                let driftClock = 0;
-                setInterval(() => {
-                    driftClock += 0.1;
-                    const latDrift = Math.sin(driftClock) * 0.012;
-                    const lngDrift = Math.cos(driftClock) * 0.012;
-                    vesselMarker.setLatLng([vessel.lat + latDrift, vessel.lng + lngDrift]);
-                }, 300);
+            // Real-Time Maritime Navigation Simulation Engine
+            let isSailing = (vessel.status === 'IN_TRANSIT');
+            let speedMultiplier = 1; // 1x, 5x, 20x
+
+            const elSpeed = document.getElementById('aisSpeedDisplay');
+            const elHeading = document.getElementById('aisHeadingDisplay');
+            const elSector = document.getElementById('aisSectorDisplay');
+            const elProgress = document.getElementById('aisProgressDisplay');
+
+            const btn1x = document.getElementById('btnSpeed1x');
+            const btn5x = document.getElementById('btnSpeed5x');
+            const btn20x = document.getElementById('btnSpeed20x');
+            const btnPlay = document.getElementById('btnPlayPause');
+
+            function setMultiplier(mult, activeBtn) {
+                speedMultiplier = mult;
+                [btn1x, btn5x, btn20x].forEach(b => {
+                    if (b) {
+                        b.classList.remove('bg-sky-600', 'text-white');
+                        b.classList.add('bg-slate-800', 'text-slate-300');
+                    }
+                });
+                if (activeBtn) {
+                    activeBtn.classList.remove('bg-slate-800', 'text-slate-300');
+                    activeBtn.classList.add('bg-sky-600', 'text-white');
+                }
             }
+
+            if (btn1x) btn1x.addEventListener('click', () => setMultiplier(1, btn1x));
+            if (btn5x) btn5x.addEventListener('click', () => setMultiplier(5, btn5x));
+            if (btn20x) btn20x.addEventListener('click', () => setMultiplier(20, btn20x));
+            if (btnPlay) {
+                btnPlay.addEventListener('click', () => {
+                    isSailing = !isSailing;
+                    btnPlay.textContent = isSailing ? '⏸️' : '▶️';
+                });
+            }
+
+            let lastTime = performance.now();
+
+            function sailLoop(currentTime) {
+                if (isSailing && totalDist > 0) {
+                    const dt = (currentTime - lastTime) / 1000;
+                    lastTime = currentTime;
+
+                    // Standard cruise progression: 1 complete oceanic crossing cycle in ~200s at 1x
+                    const advanceRate = (1 / 200) * speedMultiplier;
+                    currentProg += advanceRate * dt;
+
+                    // Loop back to start for smooth continuous observation
+                    if (currentProg > 1.0) {
+                        currentProg = 0.05;
+                    }
+
+                    const curPos = getCorridorPosition(currentProg);
+                    vesselMarker.setLatLng([curPos.lat, curPos.lng]);
+
+                    // Dynamically orient vessel icon compass card & bearing arrow
+                    const compassCard = document.getElementById('vesselCompassCard');
+                    const headingArrow = document.getElementById('vesselHeadingArrow');
+                    if (compassCard) compassCard.style.transform = `rotate(${curPos.heading}deg)`;
+                    if (headingArrow) headingArrow.style.transform = `rotate(${curPos.heading}deg)`;
+
+                    // Simulated realistic engine speed (14.2 - 15.4 knots)
+                    const liveKts = (14.6 + Math.sin(currentTime / 1800) * 0.7).toFixed(1);
+
+                    // Update Floating AIS HUD
+                    if (elSpeed) elSpeed.textContent = liveKts + ' kts';
+                    if (elHeading) elHeading.textContent = curPos.heading.toFixed(1) + '°';
+                    if (elSector) elSector.textContent = curPos.sector;
+                    if (elProgress) elProgress.textContent = (currentProg * 100).toFixed(1) + '%';
+
+                    // Update popup if open
+                    const popCoord = document.getElementById('popupLiveCoord');
+                    const popHead = document.getElementById('popupLiveHeading');
+                    const popSec = document.getElementById('popupLiveSector');
+                    if (popCoord) popCoord.textContent = `[${curPos.lat.toFixed(4)}, ${curPos.lng.toFixed(4)}]`;
+                    if (popHead) popHead.textContent = `${curPos.heading.toFixed(1)}° True`;
+                    if (popSec) popSec.textContent = curPos.sector;
+                } else {
+                    lastTime = currentTime;
+                }
+                requestAnimationFrame(sailLoop);
+            }
+
+            requestAnimationFrame(sailLoop);
         }
 
         if (bounds.length > 0) {

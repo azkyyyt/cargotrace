@@ -146,26 +146,43 @@ class DashboardController extends Controller
                     }
                 }
 
-                // Compute heading bearing towards next waypoint if in transit
+                // Compute heading bearing towards next waypoint & voyage progress if in transit
                 $heading = 90; // Default East
-                if (count($corridor) > 1) {
-                    $closestIdx = 0;
-                    $minDist = PHP_FLOAT_MAX;
-                    foreach ($corridor as $idx => $wpt) {
-                        $d = hypot($wpt[0] - $lat, $wpt[1] - $lng);
-                        if ($d < $minDist) {
-                            $minDist = $d;
-                            $closestIdx = $idx;
+                $voyageProgress = 0.0;
+
+                if (!empty($corridor) && count($corridor) > 1) {
+                    if ($s->current_status === Shipment::STATUS_IN_TRANSIT) {
+                        $isAtOrigin = ($s->origin && abs($lat - (float) $s->origin->latitude) < 0.25 && abs($lng - (float) $s->origin->longitude) < 0.25);
+                        if ($isAtOrigin) {
+                            $voyageProgress = 0.42; // default underway progress on high seas
+                            $underway = SeaRouteService::interpolatePositionAlongCorridor($corridor, $voyageProgress);
+                            $lat = $underway['lat'];
+                            $lng = $underway['lng'];
+                            $locationName = $underway['location_name'];
+                            $heading = $underway['heading'];
+                        } else {
+                            $closestIdx = 0;
+                            $minDist = PHP_FLOAT_MAX;
+                            foreach ($corridor as $idx => $wpt) {
+                                $d = hypot($wpt[0] - $lat, $wpt[1] - $lng);
+                                if ($d < $minDist) {
+                                    $minDist = $d;
+                                    $closestIdx = $idx;
+                                }
+                            }
+                            $voyageProgress = min(0.95, max(0.05, $closestIdx / (count($corridor) - 1)));
+                            $nextIdx = min(count($corridor) - 1, $closestIdx + 1);
+                            if ($closestIdx !== $nextIdx) {
+                                $heading = SeaRouteService::calculateBearing(
+                                    $lat,
+                                    $lng,
+                                    $corridor[$nextIdx][0],
+                                    $corridor[$nextIdx][1]
+                                );
+                            }
                         }
-                    }
-                    $nextIdx = min(count($corridor) - 1, $closestIdx + 1);
-                    if ($closestIdx !== $nextIdx) {
-                        $heading = SeaRouteService::calculateBearing(
-                            $lat,
-                            $lng,
-                            $corridor[$nextIdx][0],
-                            $corridor[$nextIdx][1]
-                        );
+                    } elseif ($s->current_status === Shipment::STATUS_DELIVERED) {
+                        $voyageProgress = 1.0;
                     }
                 }
 
@@ -182,6 +199,7 @@ class DashboardController extends Controller
                     'lat' => $lat,
                     'lng' => $lng,
                     'heading' => round($heading, 1),
+                    'progress' => round($voyageProgress * 100, 1),
                     'delay_status' => $s->delay_status,
                     'delay_hours' => $s->delay_duration_hours,
                     'delay_severity' => $s->delay_severity,

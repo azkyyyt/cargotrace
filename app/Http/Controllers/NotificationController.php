@@ -3,15 +3,42 @@
 namespace App\Http\Controllers;
 
 use App\Models\Notification;
+use App\Services\ExternalApiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class NotificationController extends Controller
 {
-    public function index()
+    protected ExternalApiService $apiService;
+
+    public function __construct(ExternalApiService $apiService)
     {
-        $notifications = Auth::user()->inAppNotifications()->paginate(15);
-        return view('notifications.index', compact('notifications'));
+        $this->apiService = $apiService;
+    }
+
+    public function index(Request $request)
+    {
+        $forceRefresh = $request->has('refresh');
+        $notifications = Auth::user()->inAppNotifications()->latest()->paginate(15);
+        $exchangeRates = $this->apiService->getRealtimeExchangeRates($forceRefresh);
+        $weatherBulletins = $this->apiService->getGlobalMaritimeWeatherBulletins();
+        $tradeNews = $this->apiService->getGlobalTradeNews();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'exchange_rates' => $exchangeRates,
+                'weather_bulletins' => $weatherBulletins,
+                'trade_news' => $tradeNews,
+            ]);
+        }
+
+        return view('notifications.index', compact(
+            'notifications',
+            'exchangeRates',
+            'weatherBulletins',
+            'tradeNews'
+        ));
     }
 
     public function markAsRead(int $id)

@@ -129,25 +129,55 @@ class ShipmentController extends Controller
         $currentLng = $latestEvent ? (float) $latestEvent->longitude : (float) ($shipment->origin?->longitude ?? 0);
         $currentLocationName = $latestEvent ? $latestEvent->location_name : ($shipment->origin?->name ?? 'Origin Hub');
 
-        $vesselHeading = 90;
+        $vesselHeading = 90.0;
+        $voyageProgress = 0.0;
+
         if (!empty($corridorPath) && count($corridorPath) > 1) {
-            $closestIdx = 0;
-            $minDist = PHP_FLOAT_MAX;
-            foreach ($corridorPath as $idx => $wpt) {
-                $d = hypot($wpt[0] - $currentLat, $wpt[1] - $currentLng);
-                if ($d < $minDist) {
-                    $minDist = $d;
-                    $closestIdx = $idx;
+            if ($shipment->current_status === Shipment::STATUS_IN_TRANSIT) {
+                $dep = $shipment->actual_departure ?? $shipment->expected_departure;
+                $arr = $shipment->estimated_arrival ?? $shipment->expected_arrival;
+                $totalSec = max(1, $arr->diffInSeconds($dep));
+                $elapsedSec = max(0, now()->diffInSeconds($dep, false));
+                $timeRatio = $elapsedSec / $totalSec;
+
+                // Check if latest tracking event is at origin
+                $isAtOrigin = ($shipment->origin && abs($currentLat - $shipment->origin->latitude) < 0.2 && abs($currentLng - $shipment->origin->longitude) < 0.2);
+
+                if ($isAtOrigin) {
+                    // Underway along ocean corridor
+                    $voyageProgress = max(0.25, min(0.85, $timeRatio));
+                    $underway = SeaRouteService::interpolatePositionAlongCorridor($corridorPath, $voyageProgress);
+                    $currentLat = $underway['lat'];
+                    $currentLng = $underway['lng'];
+                    $currentLocationName = $underway['location_name'];
+                    $vesselHeading = $underway['heading'];
+                } else {
+                    // Calculate closest index along corridor
+                    $closestDist = PHP_FLOAT_MAX;
+                    $closestIdx = 0;
+                    foreach ($corridorPath as $idx => $wpt) {
+                        $d = hypot($wpt[0] - $currentLat, $wpt[1] - $currentLng);
+                        if ($d < $closestDist) {
+                            $closestDist = $d;
+                            $closestIdx = $idx;
+                        }
+                    }
+                    $voyageProgress = min(0.95, max(0.05, $closestIdx / (count($corridorPath) - 1)));
+                    $nextIdx = min(count($corridorPath) - 1, $closestIdx + 1);
+                    $vesselHeading = SeaRouteService::calculateBearing(
+                        $currentLat,
+                        $currentLng,
+                        $corridorPath[$nextIdx][0],
+                        $corridorPath[$nextIdx][1]
+                    );
                 }
-            }
-            $nextIdx = min(count($corridorPath) - 1, $closestIdx + 1);
-            if ($closestIdx !== $nextIdx) {
-                $vesselHeading = SeaRouteService::calculateBearing(
-                    $currentLat,
-                    $currentLng,
-                    $corridorPath[$nextIdx][0],
-                    $corridorPath[$nextIdx][1]
-                );
+            } elseif ($shipment->current_status === Shipment::STATUS_DELIVERED) {
+                $voyageProgress = 1.0;
+                $lastPt = $corridorPath[count($corridorPath) - 1];
+                $currentLat = (float) $lastPt[0];
+                $currentLng = (float) $lastPt[1];
+                $currentLocationName = $shipment->destination?->name ?? ($lastPt[2] ?? 'Destination');
+                $vesselHeading = 90.0;
             }
         }
 
@@ -160,6 +190,7 @@ class ShipmentController extends Controller
             'transport_mode' => $shipment->carrier?->transport_mode ?? 'SEA',
             'carrier_name' => $shipment->carrier?->name ?? 'Carrier',
             'has_exception' => $shipment->exceptions->where('status', '!=', 'RESOLVED')->count() > 0,
+            'progress' => round($voyageProgress, 4),
         ];
 
         $carriers = Carrier::where('is_active', true)->get();

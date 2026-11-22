@@ -567,29 +567,61 @@
                     </div>
                 `);
 
-                // Register for subtle drift animation (oceanic motion simulation)
+                // Register for real-time continuous sea corridor sailing
                 if (shipment.status === 'IN_TRANSIT' && shipment.corridor && shipment.corridor.length > 1) {
+                    let totalD = 0;
+                    let segD = [];
+                    for (let i = 0; i < shipment.corridor.length - 1; i++) {
+                        const d = Math.hypot(shipment.corridor[i+1][0] - shipment.corridor[i][0], shipment.corridor[i+1][1] - shipment.corridor[i][1]);
+                        segD.push(d);
+                        totalD += d;
+                    }
+                    let startProg = (shipment.progress > 0) ? (shipment.progress > 1 ? shipment.progress / 100 : shipment.progress) : 0.35;
                     animatedVessels.push({
                         marker: m,
-                        baseLat: shipment.lat,
-                        baseLng: shipment.lng,
+                        corridor: shipment.corridor,
+                        totalDist: totalD,
+                        segDists: segD,
+                        progress: startProg,
                         heading: heading,
-                        phase: Math.random() * Math.PI * 2
+                        speedFactor: 1.0 + (Math.random() * 0.4 - 0.2)
                     });
                 }
             }
         });
 
-        // Subtle realistic current motion drift simulation (vessel engine pulsation & wave drift)
-        let waveClock = 0;
-        setInterval(() => {
-            waveClock += 0.08;
+        // Real-Time Fleet Cruise Animation along Navigational Corridors
+        let lastFleetTime = performance.now();
+        function fleetSailLoop(now) {
+            const dt = (now - lastFleetTime) / 1000;
+            lastFleetTime = now;
+
             animatedVessels.forEach(v => {
-                const latOffset = Math.sin(waveClock + v.phase) * 0.015;
-                const lngOffset = Math.cos(waveClock + v.phase) * 0.015;
-                v.marker.setLatLng([v.baseLat + latOffset, v.baseLng + lngOffset]);
+                if (v.totalDist > 0) {
+                    // Continuous realistic cruise along shipping fairway
+                    v.progress += (1 / 240) * v.speedFactor * dt;
+                    if (v.progress > 1.0) v.progress = 0.05;
+
+                    const target = v.progress * v.totalDist;
+                    let acc = 0;
+                    for (let i = 0; i < v.segDists.length; i++) {
+                        const sd = v.segDists[i];
+                        if (acc + sd >= target || i === v.segDists.length - 1) {
+                            const frac = sd > 0 ? (target - acc) / sd : 0;
+                            const p1 = v.corridor[i];
+                            const p2 = v.corridor[i+1];
+                            const curLat = p1[0] + frac * (p2[0] - p1[0]);
+                            const curLng = p1[1] + frac * (p2[1] - p1[1]);
+                            v.marker.setLatLng([curLat, curLng]);
+                            break;
+                        }
+                        acc += sd;
+                    }
+                }
             });
-        }, 300);
+            requestAnimationFrame(fleetSailLoop);
+        }
+        requestAnimationFrame(fleetSailLoop);
 
         if (bounds.length > 0) {
             fleetMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 5 });

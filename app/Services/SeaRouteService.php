@@ -133,4 +133,95 @@ class SeaRouteService
         $bearing = rad2deg(atan2($y, $x));
         return fmod($bearing + 360, 360);
     }
+
+    /**
+     * Interpolate a position along a corridor path based on progress (0.0 to 1.0).
+     * Returns latitude, longitude, bearing heading, and waypoint location name.
+     */
+    public static function interpolatePositionAlongCorridor(array $corridor, float $progress): array
+    {
+        if (empty($corridor)) {
+            return ['lat' => 0.0, 'lng' => 0.0, 'heading' => 90.0, 'location_name' => 'Unknown Sector', 'progress' => 0.0];
+        }
+
+        $n = count($corridor);
+        if ($n === 1 || $progress <= 0.0) {
+            return [
+                'lat' => (float) $corridor[0][0],
+                'lng' => (float) $corridor[0][1],
+                'heading' => 90.0,
+                'location_name' => $corridor[0][2] ?? 'Origin Port Terminal',
+                'progress' => 0.0,
+            ];
+        }
+
+        if ($progress >= 1.0) {
+            $last = $corridor[$n - 1];
+            return [
+                'lat' => (float) $last[0],
+                'lng' => (float) $last[1],
+                'heading' => 90.0,
+                'location_name' => $last[2] ?? 'Destination Discharge Berth',
+                'progress' => 100.0,
+            ];
+        }
+
+        // Calculate cumulative segment distances
+        $distances = [];
+        $totalDist = 0.0;
+        for ($i = 0; $i < $n - 1; $i++) {
+            $p1 = $corridor[$i];
+            $p2 = $corridor[$i + 1];
+            $d = hypot($p2[0] - $p1[0], $p2[1] - $p1[1]);
+            $distances[] = $d;
+            $totalDist += $d;
+        }
+
+        if ($totalDist <= 0) {
+            return [
+                'lat' => (float) $corridor[0][0],
+                'lng' => (float) $corridor[0][1],
+                'heading' => 90.0,
+                'location_name' => $corridor[0][2] ?? 'Origin',
+                'progress' => 0.0,
+            ];
+        }
+
+        $targetDist = $progress * $totalDist;
+        $accDist = 0.0;
+
+        for ($i = 0; $i < count($distances); $i++) {
+            $segDist = $distances[$i];
+            if ($accDist + $segDist >= $targetDist || $i === count($distances) - 1) {
+                $rem = $targetDist - $accDist;
+                $fraction = ($segDist > 0) ? min(1.0, max(0.0, $rem / $segDist)) : 0.0;
+
+                $p1 = $corridor[$i];
+                $p2 = $corridor[$i + 1];
+
+                $lat = $p1[0] + $fraction * ($p2[0] - $p1[0]);
+                $lng = $p1[1] + $fraction * ($p2[1] - $p1[1]);
+                $heading = self::calculateBearing($p1[0], $p1[1], $p2[0], $p2[1]);
+                $locName = $p1[2] ?? ($p2[2] ?? 'Oceanic Transit Fairway');
+
+                return [
+                    'lat' => round($lat, 6),
+                    'lng' => round($lng, 6),
+                    'heading' => round($heading, 1),
+                    'location_name' => $locName,
+                    'progress' => round($progress * 100, 1),
+                ];
+            }
+            $accDist += $segDist;
+        }
+
+        $last = $corridor[$n - 1];
+        return [
+            'lat' => (float) $last[0],
+            'lng' => (float) $last[1],
+            'heading' => 90.0,
+            'location_name' => $last[2] ?? 'Destination',
+            'progress' => 100.0,
+        ];
+    }
 }
