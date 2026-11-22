@@ -3,33 +3,7 @@
 @section('title', 'Create New Consignment')
 
 @section('content')
-<div class="max-w-4xl mx-auto space-y-6" x-data="{
-    cargoType: 'Corn',
-    weightVal: 25000,
-    volumeVal: 32500,
-    originId: '{{ $locations->where('code', 'BRSSZ')->first()?->id ?? ($locations->first()?->id ?? '') }}',
-    destinationId: '{{ $locations->where('code', 'IDTPP')->first()?->id ?? ($locations->skip(1)->first()?->id ?? '') }}',
-    carrierId: '{{ $carriers->first()?->id ?? '' }}',
-    itemDesc: 'Brazilian Yellow Corn Grade #2 (Moisture 13.5% Max)',
-    ratePerTon: 48.50,
-    get totalFreight() {
-        return (this.weightVal * this.ratePerTon).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-    },
-    applyPreset(cargo, weight, volume, rate, originCode, destCode, desc) {
-        this.cargoType = cargo;
-        this.weightVal = weight;
-        this.volumeVal = volume;
-        this.ratePerTon = rate;
-        this.itemDesc = desc;
-        
-        // Find matching origin/dest IDs
-        const locs = {!! json_encode($locations->map(fn($l) => ['id' => $l->id, 'code' => $l->code])) !!};
-        const o = locs.find(l => l.code === originCode);
-        const d = locs.find(l => l.code === destCode);
-        if (o) this.originId = o.id;
-        if (d) this.destinationId = d.id;
-    }
-}">
+<div class="max-w-4xl mx-auto space-y-6" x-data="grainConsignmentForm()">
 
     <!-- Header & Breadcrumb -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -253,3 +227,36 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    function grainConsignmentForm() {
+        return {
+            cargoType: 'Corn',
+            weightVal: 25000,
+            volumeVal: 32500,
+            originId: '{{ $locations->where('code', 'BRSSZ')->first()?->id ?? ($locations->first()?->id ?? '') }}',
+            destinationId: '{{ $locations->where('code', 'IDTPP')->first()?->id ?? ($locations->skip(1)->first()?->id ?? '') }}',
+            carrierId: '{{ $carriers->first()?->id ?? '' }}',
+            itemDesc: 'Brazilian Yellow Corn Grade #2 (Moisture 13.5% Max)',
+            ratePerTon: 48.50,
+            get totalFreight() {
+                return (this.weightVal * this.ratePerTon).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+            },
+            applyPreset(cargo, weight, volume, rate, originCode, destCode, desc) {
+                this.cargoType = cargo;
+                this.weightVal = weight;
+                this.volumeVal = volume;
+                this.ratePerTon = rate;
+                this.itemDesc = desc;
+
+                const locs = {!! json_encode($locations->map(function($l) { return ['id' => $l->id, 'code' => $l->code]; })) !!};
+                const o = locs.find(function(l) { return l.code === originCode; });
+                const d = locs.find(function(l) { return l.code === destCode; });
+                if (o) this.originId = o.id;
+                if (d) this.destinationId = d.id;
+            }
+        };
+    }
+</script>
+@endpush

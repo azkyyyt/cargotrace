@@ -3,114 +3,7 @@
 @section('title', 'Port & Hub Locations')
 
 @section('content')
-<div class="space-y-6" x-data="{ 
-    addLocationModal: false,
-    searchQuery: '',
-    searchResults: [],
-    isSearching: false,
-    form: {
-        code: '',
-        type: 'PORT',
-        name: '',
-        city: '',
-        country: '',
-        latitude: '',
-        longitude: '',
-        address: ''
-    },
-    pickerMap: null,
-    pickerMarker: null,
-    initPickerMap() {
-        this.$nextTick(() => {
-            const container = document.getElementById('locationPickerMap');
-            if (!container) return;
-            if (this.pickerMap) {
-                setTimeout(() => this.pickerMap.invalidateSize(), 200);
-                return;
-            }
-            this.pickerMap = L.map('locationPickerMap', {
-                minZoom: 2,
-                maxZoom: 18,
-                maxBounds: [[-85, -180], [85, 180]],
-                maxBoundsViscosity: 1.0,
-                worldCopyJump: false
-            }).setView([-6.2088, 106.8456], 3);
-
-            // Esri HD English Basemap
-            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-                minZoom: 2,
-                maxZoom: 18,
-                noWrap: true,
-                bounds: [[-85, -180], [85, 180]],
-                attribution: 'Tiles &copy; Esri &mdash; OpenStreetMap &amp; contributors'
-            }).addTo(this.pickerMap);
-
-            this.pickerMap.on('click', (e) => {
-                this.updatePin(e.latlng.lat, e.latlng.lng);
-            });
-
-            setTimeout(() => this.pickerMap.invalidateSize(), 250);
-        });
-    },
-    async doSearch() {
-        const q = this.searchQuery.trim();
-        if (q.length < 2) {
-            this.searchResults = [];
-            return;
-        }
-        this.isSearching = true;
-        try {
-            const res = await fetch(`/locations/search?q=${encodeURIComponent(q)}`);
-            this.searchResults = await res.json();
-        } catch (e) {
-            console.error('Location search error:', e);
-        } finally {
-            this.isSearching = false;
-        }
-    },
-    selectPlace(item) {
-        this.searchQuery = item.name;
-        this.searchResults = [];
-        this.form.name = item.name;
-        this.form.city = item.city;
-        this.form.country = item.country;
-        this.form.address = item.address;
-        this.form.latitude = Number(item.latitude).toFixed(6);
-        this.form.longitude = Number(item.longitude).toFixed(6);
-
-        // Auto-generate code if empty (e.g. BLWN from Belawan)
-        if (!this.form.code) {
-            const raw = (item.city || item.name).replace(/[^a-zA-Z]/g, '').toUpperCase();
-            this.form.code = raw.substring(0, 4) || 'NODE';
-        }
-
-        this.updatePin(item.latitude, item.longitude, true);
-    },
-    updatePin(lat, lng, fly = false) {
-        this.form.latitude = Number(lat).toFixed(6);
-        this.form.longitude = Number(lng).toFixed(6);
-
-        if (!this.pickerMarker) {
-            const pinIcon = L.divIcon({
-                html: `<div style='background-color: #f59e0b; width: 18px; height: 18px; border: 3px solid #ffffff; border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,0.5);'></div>`,
-                className: 'custom-picker-pin',
-                iconSize: [18, 18],
-                iconAnchor: [9, 9]
-            });
-            this.pickerMarker = L.marker([lat, lng], { draggable: true, icon: pinIcon }).addTo(this.pickerMap);
-            this.pickerMarker.on('dragend', (e) => {
-                const pos = e.target.getLatLng();
-                this.updatePin(pos.lat, pos.lng);
-            });
-        } else {
-            this.pickerMarker.setLatLng([lat, lng]);
-        }
-
-        if (fly && this.pickerMap) {
-            this.pickerMap.flyTo([lat, lng], 12);
-        }
-    }
-}" x-init="$watch('addLocationModal', value => { if (value) initPickerMap(); })">
+<div class="space-y-6" x-data="locationNodeManager()">
 
     <!-- Top Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -119,7 +12,7 @@
             <p class="text-xs text-slate-500 mt-1">Geographic nodes and terminals used for grain routes &bull; Google Maps-style location search integrated</p>
         </div>
         @if(Auth::user()->isAdmin())
-            <button type="button" @click="addLocationModal = true" class="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition">
+            <button type="button" @click="addLocationModal = true; initPickerMap();" class="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 <span>Add Node Location</span>
             </button>
@@ -316,3 +209,118 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    function locationNodeManager() {
+        return {
+            addLocationModal: false,
+            searchQuery: '',
+            searchResults: [],
+            isSearching: false,
+            form: {
+                code: '',
+                type: 'PORT',
+                name: '',
+                city: '',
+                country: '',
+                latitude: '',
+                longitude: '',
+                address: ''
+            },
+            pickerMap: null,
+            pickerMarker: null,
+            initPickerMap() {
+                this.$nextTick(() => {
+                    const container = document.getElementById('locationPickerMap');
+                    if (!container) return;
+                    if (this.pickerMap) {
+                        setTimeout(() => this.pickerMap.invalidateSize(), 200);
+                        return;
+                    }
+                    this.pickerMap = L.map('locationPickerMap', {
+                        zoomControl: true,
+                        attributionControl: true,
+                        minZoom: 2,
+                        maxZoom: 18,
+                        maxBounds: [[-85, -180], [85, 180]],
+                        maxBoundsViscosity: 1.0,
+                        worldCopyJump: false
+                    }).setView([-6.2088, 106.8456], 3);
+
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                        minZoom: 2,
+                        maxZoom: 18,
+                        noWrap: true,
+                        bounds: [[-85, -180], [85, 180]],
+                        attribution: 'Tiles &copy; Esri &mdash; OpenStreetMap &amp; contributors'
+                    }).addTo(this.pickerMap);
+
+                    this.pickerMap.on('click', (e) => {
+                        this.updatePin(e.latlng.lat, e.latlng.lng);
+                    });
+
+                    setTimeout(() => this.pickerMap.invalidateSize(), 250);
+                });
+            },
+            async doSearch() {
+                const q = this.searchQuery.trim();
+                if (q.length < 2) {
+                    this.searchResults = [];
+                    return;
+                }
+                this.isSearching = true;
+                try {
+                    const res = await fetch(`/locations/search?q=${encodeURIComponent(q)}`);
+                    this.searchResults = await res.json();
+                } catch (e) {
+                    console.error('Location search error:', e);
+                } finally {
+                    this.isSearching = false;
+                }
+            },
+            selectPlace(item) {
+                this.searchQuery = item.name;
+                this.searchResults = [];
+                this.form.name = item.name;
+                this.form.city = item.city;
+                this.form.country = item.country;
+                this.form.address = item.address;
+                this.form.latitude = Number(item.latitude).toFixed(6);
+                this.form.longitude = Number(item.longitude).toFixed(6);
+
+                if (!this.form.code) {
+                    const raw = (item.city || item.name).replace(/[^a-zA-Z]/g, '').toUpperCase();
+                    this.form.code = raw.substring(0, 4) || 'NODE';
+                }
+
+                this.updatePin(item.latitude, item.longitude, true);
+            },
+            updatePin(lat, lng, fly = false) {
+                this.form.latitude = Number(lat).toFixed(6);
+                this.form.longitude = Number(lng).toFixed(6);
+
+                if (!this.pickerMarker) {
+                    const pinIcon = L.divIcon({
+                        html: `<div style='background-color: #f59e0b; width: 18px; height: 18px; border: 3px solid #ffffff; border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,0.5);'></div>`,
+                        className: 'custom-picker-pin',
+                        iconSize: [18, 18],
+                        iconAnchor: [9, 9]
+                    });
+                    this.pickerMarker = L.marker([lat, lng], { draggable: true, icon: pinIcon }).addTo(this.pickerMap);
+                    this.pickerMarker.on('dragend', (e) => {
+                        const pos = e.target.getLatLng();
+                        this.updatePin(pos.lat, pos.lng);
+                    });
+                } else {
+                    this.pickerMarker.setLatLng([lat, lng]);
+                }
+
+                if (fly && this.pickerMap) {
+                    this.pickerMap.flyTo([lat, lng], 12);
+                }
+            }
+        };
+    }
+</script>
+@endpush

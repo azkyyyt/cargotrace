@@ -3,56 +3,7 @@
 @section('title', 'Shipment ' . $shipment->shipment_number . ' - Grain Logistics')
 
 @section('content')
-<div class="space-y-6" x-data="{ 
-    addEventModal: false, 
-    raiseExceptionModal: false, 
-    transitionModal: false, 
-    simulatePaymentModal: false, 
-    paymentMethod: 'QRIS_REALTIME', 
-    selectedTargetStatus: '',
-    selectedBank: 'BCA',
-    qrisTimer: '14:59',
-    cpSearchQuery: '',
-    cpResults: [],
-    cpSearching: false,
-    cpLocationName: '',
-    cpLat: '',
-    cpLng: '',
-    async doCpSearch() {
-        const q = this.cpSearchQuery.trim();
-        if (q.length < 2) {
-            this.cpResults = [];
-            return;
-        }
-        this.cpSearching = true;
-        try {
-            const res = await fetch(`/locations/search?q=${encodeURIComponent(q)}`);
-            this.cpResults = await res.json();
-        } catch(e) {
-            console.error(e);
-        } finally {
-            this.cpSearching = false;
-        }
-    },
-    selectCpPlace(item) {
-        this.cpSearchQuery = item.name;
-        this.cpLocationName = item.name;
-        this.cpLat = Number(item.latitude).toFixed(6);
-        this.cpLng = Number(item.longitude).toFixed(6);
-        this.cpResults = [];
-    },
-    init() {
-        let sec = 899;
-        setInterval(() => {
-            if (sec > 0) {
-                sec--;
-                const m = Math.floor(sec / 60).toString().padStart(2, '0');
-                const s = (sec % 60).toString().padStart(2, '0');
-                this.qrisTimer = `${m}:${s}`;
-            }
-        }, 1000);
-    }
-}">
+<div class="space-y-6" x-data="showShipmentManager()">
 
     <!-- Top Breadcrumb & Status Header -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -835,6 +786,59 @@
 
 @push('scripts')
 <script>
+    function showShipmentManager() {
+        return {
+            addEventModal: false,
+            raiseExceptionModal: false,
+            transitionModal: false,
+            simulatePaymentModal: false,
+            paymentMethod: 'QRIS_REALTIME',
+            selectedTargetStatus: '',
+            selectedBank: 'BCA',
+            qrisTimer: '14:59',
+            cpSearchQuery: '',
+            cpResults: [],
+            cpSearching: false,
+            cpLocationName: '',
+            cpLat: '',
+            cpLng: '',
+            async doCpSearch() {
+                const q = this.cpSearchQuery.trim();
+                if (q.length < 2) {
+                    this.cpResults = [];
+                    return;
+                }
+                this.cpSearching = true;
+                try {
+                    const res = await fetch(`/locations/search?q=${encodeURIComponent(q)}`);
+                    this.cpResults = await res.json();
+                } catch(e) {
+                    console.error(e);
+                } finally {
+                    this.cpSearching = false;
+                }
+            },
+            selectCpPlace(item) {
+                this.cpSearchQuery = item.name;
+                this.cpLocationName = item.name;
+                this.cpLat = Number(item.latitude).toFixed(6);
+                this.cpLng = Number(item.longitude).toFixed(6);
+                this.cpResults = [];
+            },
+            init() {
+                let sec = 899;
+                setInterval(() => {
+                    if (sec > 0) {
+                        sec--;
+                        const m = Math.floor(sec / 60).toString().padStart(2, '0');
+                        const s = (sec % 60).toString().padStart(2, '0');
+                        this.qrisTimer = `${m}:${s}`;
+                    }
+                }, 1000);
+            }
+        };
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         const points = {!! json_encode($mapPoints) !!};
         const corridor = {!! json_encode($corridorPath ?? []) !!};
