@@ -168,24 +168,48 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <!-- Origin Weather -->
-                <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                    <div class="flex items-center justify-between font-bold text-slate-800 mb-1">
-                        <span>Origin: {{ $shipment->origin ? $shipment->origin->city : 'N/A' }} ({{ $shipment->origin ? $shipment->origin->country : '' }})</span>
-                        <span class="text-sky-600 font-extrabold text-sm">{{ $originWeather['temperature'] ?? '--' }}&deg;C</span>
+                <!-- Origin Weather with Sky Banner -->
+                <div class="p-4 bg-gradient-to-br from-slate-800 via-slate-900 to-sky-950 text-white rounded-xl border border-slate-700 shadow-sm relative overflow-hidden flex flex-col justify-between">
+                    <div class="absolute right-2 -bottom-2 w-20 h-20 opacity-20 pointer-events-none">
+                        <svg viewBox="0 0 100 100" class="w-full h-full"><path d="M20 65 a18 18 0 0 1 14 -30 a24 24 0 0 1 42 4 a18 18 0 0 1 14 26 z" fill="#38bdf8" /></svg>
                     </div>
-                    <div class="text-[11px] text-slate-600">{{ $originWeather['condition'] ?? 'Observing conditions' }}</div>
-                    <div class="text-[10px] text-slate-400 mt-1">Wind speed: <strong class="text-slate-700">{{ $originWeather['windspeed'] ?? '--' }} km/h</strong> &bull; {{ $originWeather['source'] ?? 'Service' }}</div>
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-sky-200">Origin Loading Port</span>
+                            <span class="text-emerald-400 font-black text-lg font-mono">{{ $originWeather['temperature'] ?? '--' }}&deg;C</span>
+                        </div>
+                        <h4 class="font-extrabold text-white text-sm">{{ $shipment->origin ? $shipment->origin->name : 'N/A' }}</h4>
+                        <div class="text-[11px] text-slate-300 mt-1 flex items-center space-x-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                            <span>{{ $originWeather['condition'] ?? 'Observing conditions' }}</span>
+                        </div>
+                    </div>
+                    <div class="text-[10px] text-slate-400 mt-3 pt-2 border-t border-white/10 flex justify-between">
+                        <span>Wind Speed: <strong class="text-white">{{ $originWeather['windspeed'] ?? '--' }} km/h</strong></span>
+                        <span class="font-mono text-sky-300">Live Satellite</span>
+                    </div>
                 </div>
 
-                <!-- Destination Weather -->
-                <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                    <div class="flex items-center justify-between font-bold text-slate-800 mb-1">
-                        <span>Destination: {{ $shipment->destination ? $shipment->destination->city : 'N/A' }} ({{ $shipment->destination ? $shipment->destination->country : '' }})</span>
-                        <span class="text-sky-600 font-extrabold text-sm">{{ $destinationWeather['temperature'] ?? '--' }}&deg;C</span>
+                <!-- Destination Weather with Sky Banner -->
+                <div class="p-4 bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-950 text-white rounded-xl border border-slate-700 shadow-sm relative overflow-hidden flex flex-col justify-between">
+                    <div class="absolute right-2 -bottom-2 w-20 h-20 opacity-20 pointer-events-none">
+                        <svg viewBox="0 0 100 100" class="w-full h-full"><path d="M20 65 a18 18 0 0 1 14 -30 a24 24 0 0 1 42 4 a18 18 0 0 1 14 26 z" fill="#818cf8" /></svg>
                     </div>
-                    <div class="text-[11px] text-slate-600">{{ $destinationWeather['condition'] ?? 'Observing conditions' }}</div>
-                    <div class="text-[10px] text-slate-400 mt-1">Wind speed: <strong class="text-slate-700">{{ $destinationWeather['windspeed'] ?? '--' }} km/h</strong> &bull; {{ $destinationWeather['source'] ?? 'Service' }}</div>
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-indigo-200">Destination Discharge Port</span>
+                            <span class="text-sky-400 font-black text-lg font-mono">{{ $destinationWeather['temperature'] ?? '--' }}&deg;C</span>
+                        </div>
+                        <h4 class="font-extrabold text-white text-sm">{{ $shipment->destination ? $shipment->destination->name : 'N/A' }}</h4>
+                        <div class="text-[11px] text-slate-300 mt-1 flex items-center space-x-1.5">
+                            <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+                            <span>{{ $destinationWeather['condition'] ?? 'Observing conditions' }}</span>
+                        </div>
+                    </div>
+                    <div class="text-[10px] text-slate-400 mt-3 pt-2 border-t border-white/10 flex justify-between">
+                        <span>Wind Speed: <strong class="text-white">{{ $destinationWeather['windspeed'] ?? '--' }} km/h</strong></span>
+                        <span class="font-mono text-indigo-300">Live Satellite</span>
+                    </div>
                 </div>
             </div>
 

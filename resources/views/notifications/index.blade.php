@@ -2,6 +2,57 @@
 
 @section('title', 'Global Intelligence & Notification Center')
 
+@push('styles')
+<style>
+    /* Weather Atmospheric Visual Animations */
+    @keyframes lightningFlash {
+        0%, 82%, 100% {
+            opacity: 0.15;
+            filter: drop-shadow(0 0 0px #facc15);
+            transform: scale(0.96);
+        }
+        84%, 90% {
+            opacity: 1;
+            filter: drop-shadow(0 0 14px #fde047) drop-shadow(0 0 28px #eab308);
+            transform: scale(1.08);
+        }
+        86% {
+            opacity: 0.35;
+        }
+    }
+    .anim-lightning-bolt {
+        animation: lightningFlash 2.4s infinite ease-in-out;
+        transform-origin: center top;
+    }
+
+    @keyframes cloudDriftGentle {
+        0%, 100% { transform: translateX(0px); }
+        50% { transform: translateX(7px); }
+    }
+    .anim-cloud-drift {
+        animation: cloudDriftGentle 4.5s infinite ease-in-out;
+    }
+
+    @keyframes rainDropFall {
+        0% { transform: translateY(-4px) scaleY(0.7); opacity: 0; }
+        40% { opacity: 1; }
+        100% { transform: translateY(14px) scaleY(1.1); opacity: 0; }
+    }
+    .anim-raindrop-1 { animation: rainDropFall 1.1s infinite linear; }
+    .anim-raindrop-2 { animation: rainDropFall 1.3s infinite 0.35s linear; }
+    .anim-raindrop-3 { animation: rainDropFall 1.0s infinite 0.65s linear; }
+
+    @keyframes sunGlowPulse {
+        0%, 100% { transform: scale(1); filter: drop-shadow(0 0 6px #f59e0b); }
+        50% { transform: scale(1.06); filter: drop-shadow(0 0 16px #fbbf24); }
+    }
+    .anim-sun-pulse {
+        animation: sunGlowPulse 3.2s infinite ease-in-out;
+        transform-origin: center;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="space-y-6" x-data="notificationsCenter()">
     <!-- Top Bar: Title, Live Status & Refresh -->
@@ -35,13 +86,13 @@
 
     <!-- Navigation Sub-Tabs -->
     <div class="flex border-b border-slate-200 bg-white px-4 rounded-xl shadow-sm space-x-2 overflow-x-auto">
-        <button type="button" @click="activeTab = 'forex'" :class="activeTab === 'forex' ? 'border-sky-600 text-sky-700 font-bold' : 'border-transparent text-slate-500 hover:text-slate-700'" class="py-3 px-4 text-xs border-b-2 flex items-center space-x-2 whitespace-nowrap transition">
-            <span>💱 Live Forex &amp; Grain Valuations</span>
-            <span class="bg-sky-100 text-sky-800 text-[10px] font-bold px-1.5 py-0.5 rounded">USD Base</span>
-        </button>
         <button type="button" @click="activeTab = 'weather'" :class="activeTab === 'weather' ? 'border-sky-600 text-sky-700 font-bold' : 'border-transparent text-slate-500 hover:text-slate-700'" class="py-3 px-4 text-xs border-b-2 flex items-center space-x-2 whitespace-nowrap transition">
             <span>🌊 Worldwide Port Weather Bulletins</span>
             <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded">{{ count($weatherBulletins) }} Ports</span>
+        </button>
+        <button type="button" @click="activeTab = 'forex'" :class="activeTab === 'forex' ? 'border-sky-600 text-sky-700 font-bold' : 'border-transparent text-slate-500 hover:text-slate-700'" class="py-3 px-4 text-xs border-b-2 flex items-center space-x-2 whitespace-nowrap transition">
+            <span>💱 Live Forex &amp; Grain Valuations</span>
+            <span class="bg-sky-100 text-sky-800 text-[10px] font-bold px-1.5 py-0.5 rounded">USD Base</span>
         </button>
         <button type="button" @click="activeTab = 'wire'" :class="activeTab === 'wire' ? 'border-sky-600 text-sky-700 font-bold' : 'border-transparent text-slate-500 hover:text-slate-700'" class="py-3 px-4 text-xs border-b-2 flex items-center space-x-2 whitespace-nowrap transition">
             <span>📰 Breaking Maritime Wire</span>
@@ -53,7 +104,246 @@
         </button>
     </div>
 
-    <!-- TAB 1: Real-Time Currency Exchange Rates & Bulk Commodity Converter -->
+    <!-- TAB 1: Worldwide Marine Weather Bulletins with Illustrated Skies -->
+    <div x-show="activeTab === 'weather'" class="space-y-6">
+        <!-- Weather Status Info & Interactive Filter Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-900 text-white p-4 rounded-2xl shadow-md border border-slate-800">
+            <div class="flex items-center space-x-3">
+                <span class="text-2xl">🛰️</span>
+                <div>
+                    <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+                        <span>Open-Meteo High-Resolution Marine Satellite Feed</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Live Radar</span>
+                    </h3>
+                    <p class="text-xs text-slate-300">Pantauan visual atmosferik real-time, kondisi awan mendung, hujan maritim, hingga awan petir di 8 pelabuhan pangan dunia.</p>
+                </div>
+            </div>
+
+            <!-- Visual Weather Category Filter Buttons -->
+            <div class="flex items-center space-x-1.5 overflow-x-auto py-1">
+                <button type="button" @click="weatherFilter = 'all'" :class="weatherFilter === 'all' ? 'bg-sky-500 text-white font-bold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'" class="px-2.5 py-1 rounded-lg text-[11px] transition whitespace-nowrap">
+                    Semua ({{ count($weatherBulletins) }})
+                </button>
+                <button type="button" @click="weatherFilter = 'thunderstorm'" :class="weatherFilter === 'thunderstorm' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'" class="px-2.5 py-1 rounded-lg text-[11px] transition whitespace-nowrap flex items-center space-x-1">
+                    <span>⚡ Awan Petir</span>
+                </button>
+                <button type="button" @click="weatherFilter = 'cloudy'" :class="weatherFilter === 'cloudy' ? 'bg-slate-300 text-slate-900 font-bold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'" class="px-2.5 py-1 rounded-lg text-[11px] transition whitespace-nowrap flex items-center space-x-1">
+                    <span>☁️ Mendung</span>
+                </button>
+                <button type="button" @click="weatherFilter = 'rain'" :class="weatherFilter === 'rain' ? 'bg-sky-400 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'" class="px-2.5 py-1 rounded-lg text-[11px] transition whitespace-nowrap flex items-center space-x-1">
+                    <span>🌧️ Hujan</span>
+                </button>
+                <button type="button" @click="weatherFilter = 'partly_cloudy'" :class="weatherFilter === 'partly_cloudy' ? 'bg-blue-400 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'" class="px-2.5 py-1 rounded-lg text-[11px] transition whitespace-nowrap flex items-center space-x-1">
+                    <span>⛅ Cerah</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Port Weather Cards Grid with Rich Atmospheric Visuals -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            @foreach($weatherBulletins as $wb)
+                @php
+                    $cat = $wb['category'] ?? 'clear';
+                    
+                    // Card background theme and sky illustration colors
+                    $theme = match($cat) {
+                        'thunderstorm' => [
+                            'banner_bg' => 'bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900',
+                            'banner_border' => 'border-indigo-500/40',
+                            'badge' => 'bg-rose-500/20 text-rose-300 border border-rose-500/30',
+                            'pill_text' => '⚡ Awan Petir & Badai',
+                            'temp_color' => 'text-amber-300',
+                            'advisory_border' => 'border-l-4 border-rose-500 bg-rose-50/50',
+                        ],
+                        'cloudy' => [
+                            'banner_bg' => 'bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900',
+                            'banner_border' => 'border-slate-600/50',
+                            'badge' => 'bg-slate-600/30 text-slate-200 border border-slate-500/30',
+                            'pill_text' => '☁️ Mendung Berawan Tebal',
+                            'temp_color' => 'text-sky-300',
+                            'advisory_border' => 'border-l-4 border-slate-400 bg-slate-50/50',
+                        ],
+                        'rain' => [
+                            'banner_bg' => 'bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900',
+                            'banner_border' => 'border-sky-500/40',
+                            'badge' => 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+                            'pill_text' => '🌧️ Hujan Maritim',
+                            'temp_color' => 'text-cyan-300',
+                            'advisory_border' => 'border-l-4 border-amber-500 bg-amber-50/50',
+                        ],
+                        'partly_cloudy' => [
+                            'banner_bg' => 'bg-gradient-to-br from-sky-600 via-blue-700 to-indigo-900',
+                            'banner_border' => 'border-sky-400/30',
+                            'badge' => 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+                            'pill_text' => '⛅ Cerah Berawan',
+                            'temp_color' => 'text-amber-200',
+                            'advisory_border' => 'border-l-4 border-emerald-500 bg-emerald-50/50',
+                        ],
+                        default => [
+                            'banner_bg' => 'bg-gradient-to-br from-sky-500 via-blue-600 to-sky-800',
+                            'banner_border' => 'border-sky-300/40',
+                            'badge' => 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+                            'pill_text' => '☀️ Cerah Optimal',
+                            'temp_color' => 'text-amber-300',
+                            'advisory_border' => 'border-l-4 border-emerald-500 bg-emerald-50/50',
+                        ],
+                    };
+                @endphp
+
+                <div x-show="weatherFilter === 'all' || weatherFilter === '{{ $cat }}'" class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden group">
+                    <!-- Top Visual Atmospheric Banner -->
+                    <div class="relative p-5 {{ $theme['banner_bg'] }} border-b {{ $theme['banner_border'] }} text-white overflow-hidden min-h-[145px] flex flex-col justify-between">
+                        
+                        <!-- Atmospheric Weather SVG Illustration -->
+                        <div class="absolute right-2 top-2 w-32 h-32 pointer-events-none opacity-90 transition-transform group-hover:scale-105 duration-500">
+                            @if($cat === 'thunderstorm')
+                                <!-- Awan Petir & Badai Tropis (Thunderstorm & Lightning) -->
+                                <svg viewBox="0 0 100 100" class="w-full h-full">
+                                    <defs>
+                                        <linearGradient id="stormGrad-{{ $wb['id'] }}" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stop-color="#334155" />
+                                            <stop offset="60%" stop-color="#1e293b" />
+                                            <stop offset="100%" stop-color="#0f172a" />
+                                        </linearGradient>
+                                    </defs>
+                                    <!-- Dense Overcast Storm Cloud -->
+                                    <path d="M25 60 a18 18 0 0 1 12 -30 a22 22 0 0 1 40 4 a16 16 0 0 1 12 26 z" fill="url(#stormGrad-{{ $wb['id'] }})" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.5))" class="anim-cloud-drift" />
+                                    <!-- Pulsing Electric Lightning Bolt -->
+                                    <polygon points="50,48 38,68 47,68 41,88 64,62 53,62 58,48" fill="#facc15" stroke="#fef08a" stroke-width="1.5" class="anim-lightning-bolt" />
+                                    <!-- Angled Rain Droplets -->
+                                    <line x1="28" y1="68" x2="24" y2="78" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" class="anim-raindrop-1" />
+                                    <line x1="68" y1="68" x2="64" y2="78" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" class="anim-raindrop-2" />
+                                    <line x1="78" y1="65" x2="74" y2="75" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" class="anim-raindrop-3" />
+                                </svg>
+                            @elseif($cat === 'cloudy')
+                                <!-- Awan Mendung Tebal & Gelap (Overcast Clouds) -->
+                                <svg viewBox="0 0 100 100" class="w-full h-full">
+                                    <defs>
+                                        <linearGradient id="cloudBack-{{ $wb['id'] }}" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stop-color="#64748b" />
+                                            <stop offset="100%" stop-color="#334155" />
+                                        </linearGradient>
+                                        <linearGradient id="cloudFront-{{ $wb['id'] }}" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stop-color="#94a3b8" />
+                                            <stop offset="100%" stop-color="#475569" />
+                                        </linearGradient>
+                                    </defs>
+                                    <!-- Background Cloud -->
+                                    <path d="M40 50 a16 16 0 0 1 10 -26 a20 20 0 0 1 34 4 a14 14 0 0 1 10 22 z" fill="url(#cloudBack-{{ $wb['id'] }})" opacity="0.65" />
+                                    <!-- Foreground Main Dense Cloud -->
+                                    <path d="M20 66 a18 18 0 0 1 14 -30 a24 24 0 0 1 42 4 a18 18 0 0 1 14 26 z" fill="url(#cloudFront-{{ $wb['id'] }})" filter="drop-shadow(0 4px 8px rgba(0,0,0,0.4))" class="anim-cloud-drift" />
+                                    <!-- Gentle Wind Streaks -->
+                                    <path d="M15 75 q 15 -3 30 0" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" opacity="0.5" />
+                                    <path d="M50 78 q 20 -3 35 0" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" opacity="0.4" />
+                                </svg>
+                            @elseif($cat === 'rain')
+                                <!-- Hujan Maritim & Awan Hujan (Maritime Rain) -->
+                                <svg viewBox="0 0 100 100" class="w-full h-full">
+                                    <defs>
+                                        <linearGradient id="rainCloud-{{ $wb['id'] }}" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stop-color="#38bdf8" />
+                                            <stop offset="100%" stop-color="#1e3a8a" />
+                                        </linearGradient>
+                                    </defs>
+                                    <!-- Rain Cloud -->
+                                    <path d="M22 55 a16 16 0 0 1 12 -28 a22 22 0 0 1 38 4 a15 15 0 0 1 12 24 z" fill="url(#rainCloud-{{ $wb['id'] }})" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.3))" class="anim-cloud-drift" />
+                                    <!-- Rain Streaks Falling -->
+                                    <line x1="30" y1="62" x2="25" y2="76" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" class="anim-raindrop-1" />
+                                    <line x1="45" y1="62" x2="40" y2="76" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" class="anim-raindrop-2" />
+                                    <line x1="60" y1="62" x2="55" y2="76" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" class="anim-raindrop-3" />
+                                    <line x1="75" y1="62" x2="70" y2="76" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" class="anim-raindrop-1" />
+                                </svg>
+                            @elseif($cat === 'partly_cloudy')
+                                <!-- Cerah Berawan (Sun Behind Clouds) -->
+                                <svg viewBox="0 0 100 100" class="w-full h-full">
+                                    <!-- Sun -->
+                                    <circle cx="62" cy="36" r="18" fill="#f59e0b" filter="drop-shadow(0 0 10px #fbbf24)" class="anim-sun-pulse" />
+                                    <!-- Sun Rays -->
+                                    <g stroke="#fbbf24" stroke-width="2" stroke-linecap="round">
+                                        <line x1="62" y1="12" x2="62" y2="6" />
+                                        <line x1="79" y1="19" x2="84" y2="14" />
+                                        <line x1="86" y1="36" x2="92" y2="36" />
+                                    </g>
+                                    <!-- Drifting Cumulus Cloud in front -->
+                                    <path d="M22 66 a16 16 0 0 1 12 -28 a22 22 0 0 1 38 4 a16 16 0 0 1 14 24 z" fill="#f8fafc" filter="drop-shadow(0 4px 8px rgba(0,0,0,0.3))" class="anim-cloud-drift" />
+                                </svg>
+                            @else
+                                <!-- Cerah Optimal Lautan (Radiant Sun) -->
+                                <svg viewBox="0 0 100 100" class="w-full h-full">
+                                    <circle cx="50" cy="50" r="22" fill="#f59e0b" filter="drop-shadow(0 0 16px #fbbf24)" class="anim-sun-pulse" />
+                                    <g stroke="#fde047" stroke-width="3" stroke-linecap="round">
+                                        <line x1="50" y1="15" x2="50" y2="5" />
+                                        <line x1="50" y1="85" x2="50" y2="95" />
+                                        <line x1="15" y1="50" x2="5" y2="50" />
+                                        <line x1="85" y1="50" x2="95" y2="50" />
+                                        <line x1="25" y1="25" x2="18" y2="18" />
+                                        <line x1="75" y1="75" x2="82" y2="82" />
+                                        <line x1="75" y1="25" x2="82" y2="18" />
+                                        <line x1="25" y1="75" x2="18" y2="82" />
+                                    </g>
+                                </svg>
+                            @endif
+                        </div>
+
+                        <!-- Top Row: Port Flag Pill & Status -->
+                        <div class="relative z-10 flex items-center justify-between">
+                            <span class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-xs font-bold text-white shadow-sm">
+                                <span>{{ $wb['flag'] }}</span>
+                                <span class="font-mono text-[10px] uppercase tracking-wider">{{ $wb['country'] }}</span>
+                            </span>
+
+                            <span class="text-[9px] uppercase font-mono font-black px-2 py-0.5 rounded-full {{ $theme['badge'] }}">
+                                {{ $wb['status_level'] }}
+                            </span>
+                        </div>
+
+                        <!-- Center: Giant Temperature & Visual Condition -->
+                        <div class="relative z-10 mt-3">
+                            <div class="text-3xl font-black font-mono tracking-tight {{ $theme['temp_color'] }}">
+                                {{ $wb['temperature'] }}&deg;<span class="text-lg font-bold text-white/80">C</span>
+                            </div>
+                            <div class="inline-block mt-1 px-2.5 py-0.5 rounded-md bg-black/25 backdrop-blur-sm text-[11px] font-bold text-white tracking-wide border border-white/10">
+                                {{ $theme['pill_text'] }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Body: Port Name, Metrics & Advisory -->
+                    <div class="p-4 space-y-3 flex-1 flex flex-col justify-between bg-white">
+                        <div>
+                            <h4 class="font-black text-slate-900 text-sm tracking-tight flex items-center space-x-1.5">
+                                <span>⚓</span>
+                                <span>{{ $wb['port'] }}</span>
+                            </h4>
+                            <span class="text-[10px] text-slate-500 block mt-0.5 font-medium leading-tight">
+                                {{ $wb['role'] }}
+                            </span>
+
+                            <!-- Atmospheric Parameters Grid -->
+                            <div class="grid grid-cols-2 gap-2 mt-3 p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-center">
+                                <div>
+                                    <span class="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">💨 Wind Velocity</span>
+                                    <span class="text-xs font-black text-slate-800 font-mono">{{ $wb['windspeed'] }} km/h</span>
+                                </div>
+                                <div>
+                                    <span class="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">🌊 Wave Swell</span>
+                                    <span class="text-xs font-black text-sky-700 font-mono">{{ $wb['wave_height'] ?? '1.2' }}m Swell</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Nautical Dispatch Advisory -->
+                        <div class="p-2.5 rounded-lg {{ $theme['advisory_border'] }} text-[11px] text-slate-600 leading-snug">
+                            <span class="font-bold text-slate-800 block text-[10px] uppercase tracking-wider mb-0.5">Maritime Advisory:</span>
+                            <p class="italic text-[11px]">{{ $wb['advisory'] }}</p>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+
+    <!-- TAB 2: Live Forex & Grain Cargo Settlement Valuator -->
     <div x-show="activeTab === 'forex'" class="space-y-6">
         <!-- Live Currency Cards Grid -->
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -162,69 +452,6 @@
         </div>
     </div>
 
-    <!-- TAB 2: Worldwide Marine Weather Bulletins & Navigational Impact -->
-    <div x-show="activeTab === 'weather'" class="space-y-6">
-        <div class="bg-sky-50 border border-sky-200 p-4 rounded-xl flex items-center justify-between text-xs text-sky-900">
-            <div class="flex items-center space-x-2">
-                <span class="text-lg">🛰️</span>
-                <span>
-                    <strong>Open-Meteo High-Resolution Marine Satellite Feed:</strong> 
-                    Real-time atmospheric pressure, wind velocities, and wave disturbance monitoring across major grain choke points.
-                </span>
-            </div>
-            <span class="font-mono text-[11px] text-sky-700 font-bold">Auto-updated</span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            @foreach($weatherBulletins as $wb)
-                @php
-                    $cardBorder = match($wb['status_level']) {
-                        'ALERT' => 'border-rose-300 ring-1 ring-rose-100',
-                        'ADVISORY' => 'border-amber-300 ring-1 ring-amber-100',
-                        default => 'border-slate-200',
-                    };
-                    $badgeCls = match($wb['status_level']) {
-                        'ALERT' => 'bg-rose-100 text-rose-800',
-                        'ADVISORY' => 'bg-amber-100 text-amber-800',
-                        default => 'bg-emerald-100 text-emerald-800',
-                    };
-                @endphp
-                <div class="bg-white p-4 rounded-xl border {{ $cardBorder }} shadow-sm flex flex-col justify-between hover:shadow-md transition">
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xl">{{ $wb['flag'] }}</span>
-                            <span class="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full {{ $badgeCls }}">
-                                {{ $wb['status_level'] }}
-                            </span>
-                        </div>
-                        <h4 class="font-bold text-slate-900 text-sm">{{ $wb['port'] }}</h4>
-                        <span class="text-[10px] text-slate-400 block mb-2">{{ $wb['country'] }} &bull; {{ $wb['role'] }}</span>
-
-                        <div class="grid grid-cols-2 gap-2 my-3 p-2 bg-slate-50 rounded-lg text-center">
-                            <div>
-                                <span class="text-[10px] text-slate-400 block">Temperature</span>
-                                <span class="text-sm font-black text-slate-800 font-mono">{{ $wb['temperature'] }}&deg;C</span>
-                            </div>
-                            <div>
-                                <span class="text-[10px] text-slate-400 block">Wind Velocity</span>
-                                <span class="text-sm font-black text-sky-700 font-mono">{{ $wb['windspeed'] }} km/h</span>
-                            </div>
-                        </div>
-
-                        <div class="text-[11px] text-slate-600 font-medium mb-1 flex items-center space-x-1.5">
-                            <span class="w-2 h-2 rounded-full bg-sky-500"></span>
-                            <span>{{ $wb['condition'] }}</span>
-                        </div>
-                    </div>
-
-                    <div class="mt-3 pt-2 border-t border-slate-100">
-                        <p class="text-[10px] text-slate-500 italic">{{ $wb['advisory'] }}</p>
-                    </div>
-                </div>
-            @endforeach
-        </div>
-    </div>
-
     <!-- TAB 3: Breaking Maritime Wire & Grain News -->
     <div x-show="activeTab === 'wire'" class="space-y-4">
         @foreach($tradeNews as $news)
@@ -319,7 +546,8 @@
 <script>
     function notificationsCenter() {
         return {
-            activeTab: 'forex',
+            activeTab: 'weather', // Defaults to Weather Bulletins so the user immediately sees the rich visual skies!
+            weatherFilter: 'all',
             calcUsd: 1358000,
             selectedCur: 'IDR',
             rates: @json($exchangeRates['rates']),
