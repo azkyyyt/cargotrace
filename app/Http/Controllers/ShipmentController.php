@@ -211,11 +211,14 @@ class ShipmentController extends Controller
     public function create()
     {
         $user = Auth::user();
-        if (!$user->canManageShipments()) {
-            abort(403, 'Forbidden. Only administrators and operators can create new shipments.');
+
+        // Customers only manage/order for their own account; operators and admins can select any customer
+        if ($user->isCustomer()) {
+            $customers = collect([$user]);
+        } else {
+            $customers = User::where('role', 'customer')->get();
         }
 
-        $customers = User::where('role', 'customer')->get();
         $carriers = Carrier::where('is_active', true)->get();
         $locations = Location::all();
 
@@ -225,13 +228,9 @@ class ShipmentController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
-        if (!$user->canManageShipments()) {
-            abort(403, 'Forbidden. Only administrators and operators can create shipments.');
-        }
 
-        $validated = $request->validate([
+        $rules = [
             'shipment_number' => ['nullable', 'string', 'unique:shipments,shipment_number'],
-            'customer_id' => ['required', 'exists:users,id'],
             'carrier_id' => ['required', 'exists:carriers,id'],
             'origin_id' => ['required', 'exists:locations,id'],
             'destination_id' => ['required', 'exists:locations,id', 'different:origin_id'],
@@ -244,7 +243,18 @@ class ShipmentController extends Controller
             'notes' => ['nullable', 'string'],
             'item_description' => ['nullable', 'string'],
             'item_quantity' => ['nullable', 'integer', 'min:1'],
-        ]);
+        ];
+
+        // Only admins/operators select customer_id; for customers, it is strictly their own account
+        if ($user->canManageShipments()) {
+            $rules['customer_id'] = ['required', 'exists:users,id'];
+        }
+
+        $validated = $request->validate($rules);
+
+        if ($user->isCustomer()) {
+            $validated['customer_id'] = $user->id;
+        }
 
         if (!empty($validated['item_description'])) {
             $validated['items'] = [

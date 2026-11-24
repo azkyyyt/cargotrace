@@ -38,8 +38,10 @@ Route::middleware('auth')->group(function () {
     // Dashboard & Analytics
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Shipments
+    // Shipments & Grain Cargo Consignments (Accessible by Admins, Operators & Customers)
     Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');
+    Route::get('/shipments-create', [ShipmentController::class, 'create'])->name('shipments.create');
+    Route::post('/shipments', [ShipmentController::class, 'store'])->name('shipments.store');
     Route::get('/shipments/{id}', [ShipmentController::class, 'show'])->name('shipments.show');
 
     // Customer Grain Booking & Payment Simulation (Any authenticated user can book/pay)
@@ -49,8 +51,6 @@ Route::middleware('auth')->group(function () {
 
     // Operations (Admin & Operator only)
     Route::middleware('role:admin,operator')->group(function () {
-        Route::get('/shipments-create', [ShipmentController::class, 'create'])->name('shipments.create');
-        Route::post('/shipments', [ShipmentController::class, 'store'])->name('shipments.store');
         Route::get('/shipments/{id}/edit', [ShipmentController::class, 'edit'])->name('shipments.edit');
         Route::put('/shipments/{id}', [ShipmentController::class, 'update'])->name('shipments.update');
         Route::post('/shipments/{id}/transition', [ShipmentController::class, 'transition'])->name('shipments.transition');

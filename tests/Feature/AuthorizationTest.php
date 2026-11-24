@@ -106,4 +106,31 @@ class AuthorizationTest extends TestCase
         $response->assertRedirect('/shipments');
         $this->assertSoftDeleted('shipments', ['id' => $this->shipmentOfA->id]);
     }
+
+    public function test_customer_can_access_create_shipment_form_without_forbidden_error(): void
+    {
+        $response = $this->actingAs($this->customerA)->get('/shipments-create');
+        $response->assertStatus(200);
+        $response->assertSee('Create Grain Consignment');
+    }
+
+    public function test_customer_can_store_shipment_assigned_to_themselves(): void
+    {
+        $response = $this->actingAs($this->customerA)->post('/shipments', [
+            'carrier_id' => $this->carrier->id,
+            'origin_id' => $this->loc1->id,
+            'destination_id' => $this->loc2->id,
+            'cargo_type' => 'Wheat',
+            'weight' => 20000,
+            'volume' => 25000,
+            'expected_departure' => now()->format('Y-m-d H:i'),
+            'expected_arrival' => now()->addDays(10)->format('Y-m-d H:i'),
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('shipments', [
+            'customer_id' => $this->customerA->id,
+            'cargo_type' => 'Wheat',
+        ]);
+    }
 }

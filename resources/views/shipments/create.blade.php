@@ -95,13 +95,21 @@
 
                 <div>
                     <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">Customer / Consignee *</label>
-                    <select name="customer_id" required class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none bg-white focus:ring-2 focus:ring-sky-500 font-medium">
-                        @foreach($customers as $cust)
-                            <option value="{{ $cust->id }}" {{ old('customer_id') == $cust->id ? 'selected' : '' }}>
-                                {{ $cust->name }} ({{ $cust->company ?: 'Consignee' }})
-                            </option>
-                        @endforeach
-                    </select>
+                    @if(Auth::user()->isCustomer())
+                        <div class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 flex items-center justify-between">
+                            <span class="truncate">{{ Auth::user()->name }} ({{ Auth::user()->company ?: 'Consignee' }})</span>
+                            <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold shrink-0 ml-2">Your Account</span>
+                        </div>
+                        <input type="hidden" name="customer_id" value="{{ Auth::user()->id }}">
+                    @else
+                        <select name="customer_id" required class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none bg-white focus:ring-2 focus:ring-sky-500 font-medium">
+                            @foreach($customers as $cust)
+                                <option value="{{ $cust->id }}" {{ old('customer_id') == $cust->id ? 'selected' : '' }}>
+                                    {{ $cust->name }} ({{ $cust->company ?: 'Consignee' }})
+                                </option>
+                            @endforeach
+                        </select>
+                    @endif
                 </div>
             </div>
 
