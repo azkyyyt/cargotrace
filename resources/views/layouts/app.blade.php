@@ -73,11 +73,13 @@
                 <!-- Center/Right: Navigation & Action -->
                 <div class="flex items-center space-x-3">
                     @auth
-                        <!-- Order Grain Consignment Button (Tahap 3 Innovation) -->
-                        <a href="{{ route('shipments.create') }}" class="inline-flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-extrabold px-3.5 py-1.5 rounded-lg shadow transition">
-                            <span>🌾</span>
-                            <span>Order Grain Cargo</span>
-                        </a>
+                        @if(Auth::user()->isCustomer())
+                            <!-- Order Grain Consignment Button (Customer Only) -->
+                            <a href="{{ route('shipments.create') }}" class="inline-flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-extrabold px-3.5 py-1.5 rounded-lg shadow transition">
+                                <span>🌾</span>
+                                <span>Order Grain Cargo</span>
+                            </a>
+                        @endif
                     @endauth
                     @auth
                         <!-- Notification Bell -->

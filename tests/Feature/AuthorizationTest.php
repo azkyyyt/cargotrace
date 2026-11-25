@@ -133,4 +133,71 @@ class AuthorizationTest extends TestCase
             'cargo_type' => 'Wheat',
         ]);
     }
+
+    public function test_admin_cannot_access_create_shipment_or_order(): void
+    {
+        // Admin is platform manager and must not create or book grain orders
+        $response = $this->actingAs($this->admin)->get('/shipments-create');
+        $response->assertStatus(403);
+
+        $postResponse = $this->actingAs($this->admin)->post('/shipments', [
+            'carrier_id' => $this->carrier->id,
+            'origin_id' => $this->loc1->id,
+            'destination_id' => $this->loc2->id,
+            'cargo_type' => 'Corn',
+            'weight' => 25000,
+            'volume' => 30000,
+            'expected_departure' => now()->format('Y-m-d H:i'),
+            'expected_arrival' => now()->addDays(10)->format('Y-m-d H:i'),
+        ]);
+        $postResponse->assertStatus(403);
+    }
+
+    public function test_operator_cannot_access_create_shipment_or_order(): void
+    {
+        $operator = User::create([
+            'name' => 'Port Operator',
+            'email' => 'operator@test.com',
+            'password' => bcrypt('password'),
+            'role' => 'operator',
+        ]);
+
+        // Operator is field staff and must not order grain cargo
+        $response = $this->actingAs($operator)->get('/shipments-create');
+        $response->assertStatus(403);
+
+        $postResponse = $this->actingAs($operator)->post('/shipments', [
+            'carrier_id' => $this->carrier->id,
+            'origin_id' => $this->loc1->id,
+            'destination_id' => $this->loc2->id,
+            'cargo_type' => 'Corn',
+            'weight' => 25000,
+            'volume' => 30000,
+            'expected_departure' => now()->format('Y-m-d H:i'),
+            'expected_arrival' => now()->addDays(10)->format('Y-m-d H:i'),
+        ]);
+        $postResponse->assertStatus(403);
+    }
+
+    public function test_admin_and_operator_cannot_simulate_payment(): void
+    {
+        $operator = User::create([
+            'name' => 'Port Dispatcher',
+            'email' => 'dispatcher@test.com',
+            'password' => bcrypt('password'),
+            'role' => 'operator',
+        ]);
+
+        // Admin cannot pay
+        $adminPay = $this->actingAs($this->admin)->post("/shipments/{$this->shipmentOfA->id}/simulate-payment", [
+            'payment_method' => 'QRIS_REALTIME',
+        ]);
+        $adminPay->assertStatus(403);
+
+        // Operator cannot pay
+        $operatorPay = $this->actingAs($operator)->post("/shipments/{$this->shipmentOfA->id}/simulate-payment", [
+            'payment_method' => 'QRIS_REALTIME',
+        ]);
+        $operatorPay->assertStatus(403);
+    }
 }

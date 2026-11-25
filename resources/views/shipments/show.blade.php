@@ -49,8 +49,8 @@
 
         <!-- Action Buttons -->
         <div class="flex flex-wrap items-center gap-2">
-            <!-- Simulated Payment Gateway Trigger -->
-            @if($shipment->payment_status !== 'PAID')
+            <!-- Simulated Payment Gateway Trigger (Only Ordering Customer) -->
+            @if(Auth::user()->isCustomer() && (int)$shipment->customer_id === (int)Auth::id() && $shipment->payment_status !== 'PAID')
                 <button type="button" @click="simulatePaymentModal = true" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition flex items-center space-x-1.5">
                     <svg class="w-4 h-4 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                     <span>⚡ Settle Payment (Gateway Sandbox)</span>
@@ -469,7 +469,7 @@
                             <span class="font-mono text-slate-700 font-bold">{{ $shipment->payment_reference }}</span>
                         </div>
                     @endif
-                    @if($shipment->payment_status !== 'PAID')
+                    @if(Auth::user()->isCustomer() && (int)$shipment->customer_id === (int)Auth::id() && $shipment->payment_status !== 'PAID')
                         <button type="button" @click="simulatePaymentModal = true" class="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 px-3 rounded text-center transition">
                             Pay Now via Sandbox Gateway &rarr;
                         </button>

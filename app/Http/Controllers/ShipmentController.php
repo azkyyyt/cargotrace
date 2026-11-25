@@ -212,13 +212,12 @@ class ShipmentController extends Controller
     {
         $user = Auth::user();
 
-        // Customers only manage/order for their own account; operators and admins can select any customer
-        if ($user->isCustomer()) {
-            $customers = collect([$user]);
-        } else {
-            $customers = User::where('role', 'customer')->get();
+        // Strict role boundary: Only Customer role can place orders / book grain consignments
+        if (!$user->isCustomer()) {
+            abort(403, 'Forbidden. Hanya akun Customer (Eksportir/Importir) yang berhak melakukan pemesanan kargo gandum. Admin dan Operator bertugas mengelola sistem dan operasional logistik.');
         }
 
+        $customers = collect([$user]);
         $carriers = Carrier::where('is_active', true)->get();
         $locations = Location::all();
 
@@ -228,6 +227,11 @@ class ShipmentController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
+
+        // Strict role boundary: Only Customer role can place orders / book grain consignments
+        if (!$user->isCustomer()) {
+            abort(403, 'Forbidden. Hanya akun Customer yang berhak melakukan pemesanan kargo gandum.');
+        }
 
         $rules = [
             'shipment_number' => ['nullable', 'string', 'unique:shipments,shipment_number'],
@@ -245,16 +249,8 @@ class ShipmentController extends Controller
             'item_quantity' => ['nullable', 'integer', 'min:1'],
         ];
 
-        // Only admins/operators select customer_id; for customers, it is strictly their own account
-        if ($user->canManageShipments()) {
-            $rules['customer_id'] = ['required', 'exists:users,id'];
-        }
-
         $validated = $request->validate($rules);
-
-        if ($user->isCustomer()) {
-            $validated['customer_id'] = $user->id;
-        }
+        $validated['customer_id'] = $user->id; // Strictly locked to authenticated customer
 
         if (!empty($validated['item_description'])) {
             $validated['items'] = [
@@ -340,6 +336,11 @@ class ShipmentController extends Controller
     {
         $user = Auth::user();
 
+        // Strict role boundary: Only Customer role can place orders / book grain consignments
+        if (!$user->isCustomer()) {
+            abort(403, 'Forbidden. Pemesanan komoditas gandum hanya dapat dilakukan oleh akun Customer.');
+        }
+
         $validated = $request->validate([
             'cargo_type' => ['required', 'in:Wheat,Corn,Soybeans,Rice'],
             'carrier_id' => ['required', 'exists:carriers,id'],
@@ -364,8 +365,9 @@ class ShipmentController extends Controller
         $user = Auth::user();
         $shipment = Shipment::findOrFail($id);
 
-        if ($user->isCustomer() && (int) $shipment->customer_id !== (int) $user->id) {
-            abort(403, 'Unauthorized.');
+        // Strict role boundary: Only the ordering Customer can settle payment
+        if (!$user->isCustomer() || (int) $shipment->customer_id !== (int) $user->id) {
+            abort(403, 'Unauthorized. Hanya Customer pemilik konsinyasi yang berhak melakukan penyelesaian pembayaran.');
         }
 
         $validated = $request->validate([

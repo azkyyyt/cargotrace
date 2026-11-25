@@ -13,10 +13,10 @@
                 Real-time shipment visibility &bull; Threshold reference: <span class="font-bold text-sky-700">{{ env('GROUP_DELAY_THRESHOLD_HOURS', 18) }}h</span>
             </p>
         </div>
-        @if(Auth::user()->canManageShipments())
-            <a href="{{ route('shipments.create') }}" class="inline-flex items-center space-x-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                <span>New Shipment</span>
+        @if(Auth::user()->isCustomer())
+            <a href="{{ route('shipments.create') }}" class="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition">
+                <span>🌾</span>
+                <span>Order Grain Cargo</span>
             </a>
         @endif
     </div>

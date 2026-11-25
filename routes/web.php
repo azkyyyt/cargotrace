@@ -38,16 +38,18 @@ Route::middleware('auth')->group(function () {
     // Dashboard & Analytics
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Shipments & Grain Cargo Consignments (Accessible by Admins, Operators & Customers)
+    // Shipments & Grain Cargo Consignments
     Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');
-    Route::get('/shipments-create', [ShipmentController::class, 'create'])->name('shipments.create');
-    Route::post('/shipments', [ShipmentController::class, 'store'])->name('shipments.store');
     Route::get('/shipments/{id}', [ShipmentController::class, 'show'])->name('shipments.show');
-
-    // Customer Grain Booking & Payment Simulation (Any authenticated user can book/pay)
-    Route::post('/grain-book', [ShipmentController::class, 'bookGrain'])->name('shipments.bookGrain');
-    Route::post('/shipments/{id}/simulate-payment', [ShipmentController::class, 'simulatePayment'])->name('shipments.simulatePayment');
     Route::post('/shipments/{id}/weather-check', [ShipmentController::class, 'checkWeatherImpact'])->name('shipments.weatherCheck');
+
+    // Customer ONLY: Ordering / Booking Grain Cargo & Payment Settlement
+    Route::middleware('role:customer')->group(function () {
+        Route::get('/shipments-create', [ShipmentController::class, 'create'])->name('shipments.create');
+        Route::post('/shipments', [ShipmentController::class, 'store'])->name('shipments.store');
+        Route::post('/grain-book', [ShipmentController::class, 'bookGrain'])->name('shipments.bookGrain');
+        Route::post('/shipments/{id}/simulate-payment', [ShipmentController::class, 'simulatePayment'])->name('shipments.simulatePayment');
+    });
 
     // Operations (Admin & Operator only)
     Route::middleware('role:admin,operator')->group(function () {
