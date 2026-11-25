@@ -97,7 +97,7 @@ class DashboardController extends Controller
         $activeExceptions = (clone $exceptionQuery)
             ->with(['shipment.customer'])
             ->where('status', '!=', ShipmentException::STATUS_RESOLVED)
-            ->orderByRaw("FIELD(severity, 'HIGH', 'MEDIUM', 'LOW')")
+            ->orderByRaw("CASE severity WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 ELSE 4 END")
             ->take(5)
             ->get();
 
