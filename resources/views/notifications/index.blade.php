@@ -148,110 +148,76 @@
                     // Card background theme and sky illustration colors
                     $theme = match($cat) {
                         'thunderstorm' => [
-                            'banner_bg' => 'bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900',
+                            'banner_bg' => 'bg-slate-950',
                             'banner_border' => 'border-indigo-500/40',
                             'badge' => 'bg-rose-500/20 text-rose-300 border border-rose-500/30',
-                            'pill_text' => '⚡ Awan Petir & Badai',
+                            'pill_text' => 'Storm & Lightning Alert',
                             'temp_color' => 'text-amber-300',
                             'advisory_border' => 'border-l-4 border-rose-500 bg-rose-50/50',
                         ],
                         'cloudy' => [
-                            'banner_bg' => 'bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900',
+                            'banner_bg' => 'bg-slate-800',
                             'banner_border' => 'border-slate-600/50',
                             'badge' => 'bg-slate-600/30 text-slate-200 border border-slate-500/30',
-                            'pill_text' => '☁️ Mendung Berawan Tebal',
+                            'pill_text' => 'Overcast Conditions',
                             'temp_color' => 'text-sky-300',
                             'advisory_border' => 'border-l-4 border-slate-400 bg-slate-50/50',
                         ],
                         'rain' => [
-                            'banner_bg' => 'bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900',
+                            'banner_bg' => 'bg-slate-900',
                             'banner_border' => 'border-sky-500/40',
                             'badge' => 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
-                            'pill_text' => '🌧️ Hujan Maritim',
+                            'pill_text' => 'Maritime Rainfall',
                             'temp_color' => 'text-cyan-300',
                             'advisory_border' => 'border-l-4 border-amber-500 bg-amber-50/50',
                         ],
                         'partly_cloudy' => [
-                            'banner_bg' => 'bg-gradient-to-br from-sky-600 via-blue-700 to-indigo-900',
+                            'banner_bg' => 'bg-sky-900',
                             'banner_border' => 'border-sky-400/30',
                             'badge' => 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
-                            'pill_text' => '⛅ Cerah Berawan',
+                            'pill_text' => 'Partly Cloudy',
                             'temp_color' => 'text-amber-200',
                             'advisory_border' => 'border-l-4 border-emerald-500 bg-emerald-50/50',
                         ],
                         default => [
-                            'banner_bg' => 'bg-gradient-to-br from-sky-500 via-blue-600 to-sky-800',
+                            'banner_bg' => 'bg-sky-800',
                             'banner_border' => 'border-sky-300/40',
                             'badge' => 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
-                            'pill_text' => '☀️ Cerah Optimal',
+                            'pill_text' => 'Clear Maritime Sky',
                             'temp_color' => 'text-amber-300',
                             'advisory_border' => 'border-l-4 border-emerald-500 bg-emerald-50/50',
                         ],
                     };
                 @endphp
 
-                <div x-show="weatherFilter === 'all' || weatherFilter === '{{ $cat }}'" class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden group">
+                <div x-show="weatherFilter === 'all' || weatherFilter === '{{ $cat }}'" class="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col justify-between overflow-hidden group">
                     <!-- Top Visual Atmospheric Banner -->
                     <div class="relative p-5 {{ $theme['banner_bg'] }} border-b {{ $theme['banner_border'] }} text-white overflow-hidden min-h-[145px] flex flex-col justify-between">
                         
                         <!-- Atmospheric Weather SVG Illustration -->
-                        <div class="absolute right-2 top-2 w-32 h-32 pointer-events-none opacity-90 transition-transform group-hover:scale-105 duration-500">
+                        <div class="absolute right-2 top-2 w-32 h-32 pointer-events-none opacity-90">
                             @if($cat === 'thunderstorm')
-                                <!-- Awan Petir & Badai Tropis (Thunderstorm & Lightning) -->
                                 <svg viewBox="0 0 100 100" class="w-full h-full">
-                                    <defs>
-                                        <linearGradient id="stormGrad-{{ $wb['id'] }}" x1="0%" y1="0%" x2="100%" y2="100%">
-                                            <stop offset="0%" stop-color="#334155" />
-                                            <stop offset="60%" stop-color="#1e293b" />
-                                            <stop offset="100%" stop-color="#0f172a" />
-                                        </linearGradient>
-                                    </defs>
-                                    <!-- Dense Overcast Storm Cloud -->
-                                    <path d="M25 60 a18 18 0 0 1 12 -30 a22 22 0 0 1 40 4 a16 16 0 0 1 12 26 z" fill="url(#stormGrad-{{ $wb['id'] }})" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.5))" class="anim-cloud-drift" />
-                                    <!-- Pulsing Electric Lightning Bolt -->
-                                    <polygon points="50,48 38,68 47,68 41,88 64,62 53,62 58,48" fill="#facc15" stroke="#fef08a" stroke-width="1.5" class="anim-lightning-bolt" />
-                                    <!-- Angled Rain Droplets -->
-                                    <line x1="28" y1="68" x2="24" y2="78" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" class="anim-raindrop-1" />
-                                    <line x1="68" y1="68" x2="64" y2="78" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" class="anim-raindrop-2" />
-                                    <line x1="78" y1="65" x2="74" y2="75" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" class="anim-raindrop-3" />
+                                    <path d="M25 60 a18 18 0 0 1 12 -30 a22 22 0 0 1 40 4 a16 16 0 0 1 12 26 z" fill="#1e293b" />
+                                    <polygon points="50,48 38,68 47,68 41,88 64,62 53,62 58,48" fill="#facc15" stroke="#fef08a" stroke-width="1.5" />
+                                    <line x1="28" y1="68" x2="24" y2="78" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" />
+                                    <line x1="68" y1="68" x2="64" y2="78" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" />
+                                    <line x1="78" y1="65" x2="74" y2="75" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" />
                                 </svg>
                             @elseif($cat === 'cloudy')
-                                <!-- Awan Mendung Tebal & Gelap (Overcast Clouds) -->
                                 <svg viewBox="0 0 100 100" class="w-full h-full">
-                                    <defs>
-                                        <linearGradient id="cloudBack-{{ $wb['id'] }}" x1="0%" y1="0%" x2="100%" y2="100%">
-                                            <stop offset="0%" stop-color="#64748b" />
-                                            <stop offset="100%" stop-color="#334155" />
-                                        </linearGradient>
-                                        <linearGradient id="cloudFront-{{ $wb['id'] }}" x1="0%" y1="0%" x2="100%" y2="100%">
-                                            <stop offset="0%" stop-color="#94a3b8" />
-                                            <stop offset="100%" stop-color="#475569" />
-                                        </linearGradient>
-                                    </defs>
-                                    <!-- Background Cloud -->
-                                    <path d="M40 50 a16 16 0 0 1 10 -26 a20 20 0 0 1 34 4 a14 14 0 0 1 10 22 z" fill="url(#cloudBack-{{ $wb['id'] }})" opacity="0.65" />
-                                    <!-- Foreground Main Dense Cloud -->
-                                    <path d="M20 66 a18 18 0 0 1 14 -30 a24 24 0 0 1 42 4 a18 18 0 0 1 14 26 z" fill="url(#cloudFront-{{ $wb['id'] }})" filter="drop-shadow(0 4px 8px rgba(0,0,0,0.4))" class="anim-cloud-drift" />
-                                    <!-- Gentle Wind Streaks -->
+                                    <path d="M40 50 a16 16 0 0 1 10 -26 a20 20 0 0 1 34 4 a14 14 0 0 1 10 22 z" fill="#475569" opacity="0.65" />
+                                    <path d="M20 66 a18 18 0 0 1 14 -30 a24 24 0 0 1 42 4 a18 18 0 0 1 14 26 z" fill="#64748b" />
                                     <path d="M15 75 q 15 -3 30 0" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" opacity="0.5" />
                                     <path d="M50 78 q 20 -3 35 0" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" opacity="0.4" />
                                 </svg>
                             @elseif($cat === 'rain')
-                                <!-- Hujan Maritim & Awan Hujan (Maritime Rain) -->
                                 <svg viewBox="0 0 100 100" class="w-full h-full">
-                                    <defs>
-                                        <linearGradient id="rainCloud-{{ $wb['id'] }}" x1="0%" y1="0%" x2="100%" y2="100%">
-                                            <stop offset="0%" stop-color="#38bdf8" />
-                                            <stop offset="100%" stop-color="#1e3a8a" />
-                                        </linearGradient>
-                                    </defs>
-                                    <!-- Rain Cloud -->
-                                    <path d="M22 55 a16 16 0 0 1 12 -28 a22 22 0 0 1 38 4 a15 15 0 0 1 12 24 z" fill="url(#rainCloud-{{ $wb['id'] }})" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.3))" class="anim-cloud-drift" />
-                                    <!-- Rain Streaks Falling -->
-                                    <line x1="30" y1="62" x2="25" y2="76" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" class="anim-raindrop-1" />
-                                    <line x1="45" y1="62" x2="40" y2="76" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" class="anim-raindrop-2" />
-                                    <line x1="60" y1="62" x2="55" y2="76" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" class="anim-raindrop-3" />
-                                    <line x1="75" y1="62" x2="70" y2="76" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" class="anim-raindrop-1" />
+                                    <path d="M22 55 a16 16 0 0 1 12 -28 a22 22 0 0 1 38 4 a15 15 0 0 1 12 24 z" fill="#0369a1" />
+                                    <line x1="30" y1="62" x2="25" y2="76" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" />
+                                    <line x1="45" y1="62" x2="40" y2="76" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" />
+                                    <line x1="60" y1="62" x2="55" y2="76" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" />
+                                    <line x1="75" y1="62" x2="70" y2="76" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" />
                                 </svg>
                             @elseif($cat === 'partly_cloudy')
                                 <!-- Cerah Berawan (Sun Behind Clouds) -->
@@ -375,7 +341,7 @@
         </div>
 
         <!-- Interactive FX Calculator for Grain Freight & Invoicing -->
-        <div class="bg-gradient-to-br from-slate-900 to-sky-950 p-6 rounded-2xl text-white shadow-xl">
+        <div class="bg-slate-900 p-6 rounded-lg text-white shadow-sm border border-slate-800">
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div class="space-y-2 max-w-md">
                     <span class="text-xs font-bold text-sky-400 uppercase tracking-widest">Interactive Grain Cargo Valuator</span>

@@ -154,30 +154,38 @@
     </div>
 
     <!-- Active Trade Corridors Reference Banner -->
-    <div class="bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 border border-slate-800 rounded-2xl p-5 text-white shadow-lg">
+    <div class="bg-slate-900 border border-slate-800 rounded-lg p-5 text-white shadow-sm">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-                <div class="flex items-center space-x-2 text-amber-400 font-bold text-xs uppercase tracking-wider mb-1">
-                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                    <span>Maritime Freight Operations &amp; Lane Visibility</span>
+                <div class="text-sky-400 font-semibold text-xs uppercase tracking-wider mb-1">
+                    Maritime Freight Operations &amp; Lane Visibility
                 </div>
-                <h2 class="text-lg font-black tracking-tight text-white">Active International Bulk Cargo Corridors</h2>
+                <h2 class="text-lg font-bold tracking-tight text-white">Active International Bulk Cargo Corridors</h2>
                 <p class="text-xs text-slate-300 mt-1 max-w-2xl">
-                    Tracking end-to-end consignment lifecycles, deterministic ETA deviations, and disruption exceptions across synthetic multi-regional demonstration routes.
+                    Tracking end-to-end consignment lifecycles, deterministic ETA deviations, and disruption exceptions across active maritime corridors.
                 </p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
                 @if(Auth::user()->canManageShipments())
-                    <a href="{{ route('shipments.create') }}" class="inline-flex items-center space-x-2 bg-sky-500 hover:bg-sky-400 text-white text-xs font-black px-4 py-2.5 rounded-xl shadow-md transition">
+                    <a href="{{ route('shipments.create') }}" class="inline-flex items-center space-x-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold px-4 py-2 rounded-md transition">
                         <span>+ Create Shipment</span>
                     </a>
+                    <a href="{{ route('finance.index') }}" class="inline-flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold px-4 py-2 rounded-md transition">
+                        <span>Revenue &amp; Finance</span>
+                    </a>
                 @elseif(Auth::user()->isAdmin())
-                    <a href="{{ route('settings.index') }}" class="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black px-4 py-2.5 rounded-xl shadow-md transition">
+                    <a href="{{ route('finance.index') }}" class="inline-flex items-center space-x-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold px-4 py-2 rounded-md transition">
+                        <span>Revenue &amp; Finance</span>
+                    </a>
+                    <a href="{{ route('settings.index') }}" class="inline-flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold px-4 py-2 rounded-md transition">
                         <span>Configure Thresholds</span>
                     </a>
                 @else
-                    <a href="{{ route('shipments.index') }}" class="inline-flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black px-4 py-2.5 rounded-xl shadow-md transition">
-                        <span>View My Shipments &rarr;</span>
+                    <a href="{{ route('shop.index') }}" class="inline-flex items-center space-x-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold px-4 py-2 rounded-md transition">
+                        <span>Purchase Commodity</span>
+                    </a>
+                    <a href="{{ route('shipments.index') }}" class="inline-flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold px-4 py-2 rounded-md transition">
+                        <span>View My Shipments</span>
                     </a>
                 @endif
             </div>

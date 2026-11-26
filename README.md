@@ -6,7 +6,7 @@
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=flat&logo=php)](https://www.php.net/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
 [![Leaflet.js](https://img.shields.io/badge/Leaflet.js-1.9.4-199900?style=flat&logo=leaflet)](https://leafletjs.com/)
-[![Tests](https://img.shields.io/badge/Tests-35%20Passed%20(138%20assertions)-success?style=flat)](tests)
+[![Tests](https://img.shields.io/badge/Tests-41%20Passed%20(195%20assertions)-success?style=flat)](tests)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Railway-0B0D0E?style=flat&logo=railway)](https://azkiaakbar.up.railway.app)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -30,7 +30,9 @@ CargoTrace is a full-featured shipment tracking and visibility platform built st
 - **Interactive Waypoint Mapping**: Integrated Leaflet.js with OpenStreetMap to render maritime/air corridors, intermediate transit hubs, and exception coordinates.
 - **Live External Service Integrations**: Real-time geocoding via OpenStreetMap Nominatim and atmospheric weather via Open-Meteo with network timeout resilience and graceful fallbacks.
 - **Full REST API Suite with Laravel Sanctum**: Token-based authentication, server-side authorization, JSON error contracts, and complete Postman collection.
-- **Rigorous Automated Testing**: 35 automated feature & unit tests covering authentication, strict RBAC isolation, user/threshold administration, state machine transitions, chronological tracking validation, delay math, and REST endpoints.
+- **Customer Commodity Purchase & Payment Gateway**: Dedicated procurement storefront (`/shop`) with Payment Gateway checkout (`/shipments/{id}/payment`) supporting QRIS, Virtual Account, and L/C settlement before unlocking vessel tracking.
+- **Revenue & Financial Reporting**: Dedicated Admin & Operator ledger (`/finance`) aggregating settled Gross Revenue, Vessel Charter Fees, Net Clean Revenue, and unsettled receivables, with downloadable Excel (`.xlsx`) and CSV reports.
+- **Rigorous Automated Testing**: 41 automated feature & unit tests covering authentication, strict RBAC isolation, user/threshold administration, purchase/payment tracking gate, financial reporting/exports, state machine transitions, chronological tracking validation, delay math, and REST endpoints.
 - **Technical Documentation**: Full ERD and Data Dictionary provided in [`docs/DATA_DICTIONARY_AND_ERD.md`](./docs/DATA_DICTIONARY_AND_ERD.md).
 
 ---
@@ -90,6 +92,8 @@ All endpoints and controllers verify role permissions on the server:
 | Record Tracking Checkpoints | :x: | :white_check_mark: | :x: |
 | Flag & Resolve Exceptions | :x: | :white_check_mark: | View Relevant Only |
 | Delete Erroneous Consignment | :white_check_mark: | :x: | :x: |
+| Customer Commodity Purchase &amp; Payment Gateway (`/shop`) | :x: | :x: | :white_check_mark: |
+| Revenue &amp; Financial Ledger + `.xlsx`/`.csv` Exports (`/finance`) | :white_check_mark: | :white_check_mark: | :x: |
 | Inspect Security Audit Logs | :white_check_mark: | :x: | :x: |
 
 ---
@@ -341,10 +345,11 @@ php artisan test
    PASS  Tests\Feature\EtaDelayCalculationTest (4 tests)
    PASS  Tests\Feature\ExampleTest (2 tests)
    PASS  Tests\Feature\NotificationFeedRealtimeTest (2 tests)
+   PASS  Tests\Feature\PurchasePaymentAndFinanceTest (6 tests)
    PASS  Tests\Feature\ShipmentLifecycleTest (3 tests)
    PASS  Tests\Feature\TrackingChronologyValidationTest (3 tests)
 
-  Tests:    35 passed (138 assertions)
+  Tests:    41 passed (195 assertions)
   Duration: 42.71s
 ```
 

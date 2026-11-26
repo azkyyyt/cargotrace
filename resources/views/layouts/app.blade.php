@@ -57,7 +57,7 @@
                         </svg>
                     </button>
                     <a href="{{ route('dashboard') }}" class="flex items-center space-x-2">
-                        <div class="bg-gradient-to-tr from-amber-500 to-sky-600 text-white p-2 rounded-lg font-bold shadow-md">
+                        <div class="bg-sky-700 text-white p-2 rounded-lg font-bold shadow-sm">
                             <!-- Bulk Cargo Vessel & Grain Ear Icon -->
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
@@ -75,9 +75,15 @@
                     @auth
                         @if(Auth::user()->canManageShipments())
                             <!-- Create Operational Shipment Button (Logistics Operator Only) -->
-                            <a href="{{ route('shipments.create') }}" class="inline-flex items-center space-x-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow transition">
+                            <a href="{{ route('shipments.create') }}" class="inline-flex items-center space-x-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs font-semibold px-3.5 py-1.5 rounded-md transition">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                 <span>Create Shipment</span>
+                            </a>
+                        @elseif(Auth::user()->isCustomer())
+                            <!-- Customer Purchase Commodity CTA -->
+                            <a href="{{ route('shop.index') }}" class="inline-flex items-center space-x-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs font-semibold px-3.5 py-1.5 rounded-md transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                                <span>Purchase Cargo</span>
                             </a>
                         @endif
                     @endauth
@@ -139,7 +145,25 @@
                         <span>Dashboard</span>
                     </a>
 
-                    <a href="{{ route('shipments.index') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ request()->routeIs('shipments.*') ? 'bg-sky-50 text-sky-700 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
+                    @if(Auth::user()->isCustomer())
+                        <a href="{{ route('shop.index') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ request()->routeIs('shop.*') || request()->routeIs('shipments.payment') ? 'bg-sky-50 text-sky-700 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
+                            <svg class="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            </svg>
+                            <span>Purchase Cargo</span>
+                        </a>
+                    @endif
+
+                    @if(Auth::user()->isAdmin() || Auth::user()->isOperator())
+                        <a href="{{ route('finance.index') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ request()->routeIs('finance.*') ? 'bg-sky-50 text-sky-700 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
+                            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                            <span>Revenue &amp; Finance</span>
+                        </a>
+                    @endif
+
+                    <a href="{{ route('shipments.index') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ request()->routeIs('shipments.*') && !request()->routeIs('shipments.payment') ? 'bg-sky-50 text-sky-700 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
                         <svg class="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                         </svg>

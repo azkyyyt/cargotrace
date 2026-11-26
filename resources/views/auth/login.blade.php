@@ -11,24 +11,24 @@
     </div>
 
     <!-- Quick Demo Access Banner (Portfolio Feature) -->
-    <div class="bg-gradient-to-r from-slate-900 to-sky-950 text-white rounded-xl p-4 mb-6 shadow-md border border-slate-800">
-        <div class="flex items-center space-x-2 text-xs font-bold text-sky-400 mb-2 uppercase tracking-wider">
+    <div class="bg-slate-900 text-white rounded-lg p-4 mb-6 shadow-sm border border-slate-800">
+        <div class="flex items-center space-x-2 text-xs font-semibold text-sky-400 mb-2 uppercase tracking-wider">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            <span>Examiner / Evaluator 1-Click Demo Login</span>
+            <span>Quick Evaluator Role Sign-In</span>
         </div>
-        <p class="text-xs text-slate-300 mb-3">Instant role-based authorization test accounts (no typing needed):</p>
+        <p class="text-xs text-slate-300 mb-3">Instant role-based test accounts:</p>
         <div class="grid grid-cols-3 gap-2 text-center text-xs">
-            <a href="{{ route('demo.login', 'admin') }}" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 px-2 rounded-lg transition shadow-sm">
-                👑 Admin
-                <div class="text-[9px] font-normal text-slate-800">Full Control</div>
+            <a href="{{ route('demo.login', 'admin') }}" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold py-2 px-2 rounded-md transition">
+                Admin
+                <div class="text-[10px] font-normal text-slate-800">Full Control</div>
             </a>
-            <a href="{{ route('demo.login', 'operator') }}" class="bg-sky-500 hover:bg-sky-400 text-white font-bold py-2 px-2 rounded-lg transition shadow-sm">
-                🚚 Operator
-                <div class="text-[9px] font-normal text-sky-100">Shipments &amp; Logs</div>
+            <a href="{{ route('demo.login', 'operator') }}" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold py-2 px-2 rounded-md transition">
+                Operator
+                <div class="text-[10px] font-normal text-sky-100">Shipments &amp; Ops</div>
             </a>
-            <a href="{{ route('demo.login', 'customer') }}" class="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-2 px-2 rounded-lg transition shadow-sm">
-                🏢 Customer
-                <div class="text-[9px] font-normal text-emerald-100">Budi Santoso</div>
+            <a href="{{ route('demo.login', 'customer') }}" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-2 rounded-md transition">
+                Customer
+                <div class="text-[10px] font-normal text-emerald-100">Budi Santoso</div>
             </a>
         </div>
     </div>

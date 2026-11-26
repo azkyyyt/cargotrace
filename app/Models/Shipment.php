@@ -50,19 +50,35 @@ class Shipment extends Model
         'payment_status',
         'payment_method',
         'payment_reference',
+        'paid_at',
         'freight_charge_usd',
+        'commodity_price_usd',
+        'vessel_fee_usd',
+        'gross_amount_usd',
+        'net_revenue_usd',
     ];
 
     protected $casts = [
         'weight' => 'float',
         'volume' => 'float',
+        'freight_charge_usd' => 'float',
+        'commodity_price_usd' => 'float',
+        'vessel_fee_usd' => 'float',
+        'gross_amount_usd' => 'float',
+        'net_revenue_usd' => 'float',
         'delay_duration_hours' => 'integer',
         'expected_departure' => 'datetime',
         'expected_arrival' => 'datetime',
         'actual_departure' => 'datetime',
         'actual_arrival' => 'datetime',
         'estimated_arrival' => 'datetime',
+        'paid_at' => 'datetime',
     ];
+
+    public function isPaid(): bool
+    {
+        return $this->payment_status === 'PAID';
+    }
 
     public function customer()
     {

@@ -237,6 +237,28 @@ class DatabaseSeeder extends Seeder
 
         // Ensure idempotency when seeder runs multiple times on container restart
         if (Shipment::withTrashed()->count() > 0) {
+            Shipment::withTrashed()->where('gross_amount_usd', '<=', 0)->get()->each(function ($s) {
+                $unitRate = match (strtolower($s->cargo_type)) {
+                    'rice' => 580.00,
+                    'wheat' => 275.00,
+                    'corn' => 215.00,
+                    'soybeans' => 445.00,
+                    default => 250.00,
+                };
+                $commodityVal = round($s->weight * $unitRate, 2);
+                $freightVal = (float) ($s->freight_charge_usd > 0 ? $s->freight_charge_usd : round($s->weight * 45.00, 2));
+                $vesselFee = round($s->weight * 28.00, 2);
+                $gross = $commodityVal + $freightVal;
+                $s->update([
+                    'commodity_price_usd' => $commodityVal,
+                    'freight_charge_usd' => $freightVal,
+                    'vessel_fee_usd' => $vesselFee,
+                    'gross_amount_usd' => $gross,
+                    'net_revenue_usd' => max(0, $gross - $vesselFee),
+                    'paid_at' => $s->payment_status === 'PAID' ? ($s->paid_at ?? $s->created_at ?? now()) : null,
+                ]);
+            });
+            $this->seedPendingRiceShowcase($customer1, $carrierModels, $locationModels, Carbon::now());
             return;
         }
 
@@ -270,7 +292,12 @@ class DatabaseSeeder extends Seeder
             'payment_status' => 'PAID',
             'payment_method' => 'QRIS_REALTIME',
             'payment_reference' => 'QRIS-2026-BRZ99120',
+            'paid_at' => $s1Departure->copy()->subDays(1),
             'freight_charge_usd' => 1358000.00,
+            'commodity_price_usd' => 6020000.00,
+            'vessel_fee_usd' => 896000.00,
+            'gross_amount_usd' => 7378000.00,
+            'net_revenue_usd' => 6482000.00,
             'notes' => 'Bulk yellow corn for feed mill processing in West Java.',
         ]);
 
@@ -372,7 +399,12 @@ class DatabaseSeeder extends Seeder
             'payment_status' => 'PAID',
             'payment_method' => 'LETTER_OF_CREDIT',
             'payment_reference' => 'LC-ANZ-2026-00412',
+            'paid_at' => $s2Departure->copy()->subDays(2),
             'freight_charge_usd' => 960000.00,
+            'commodity_price_usd' => 8800000.00,
+            'vessel_fee_usd' => 640000.00,
+            'gross_amount_usd' => 9760000.00,
+            'net_revenue_usd' => 9120000.00,
             'notes' => 'Australian Hard Wheat (APW) for flour mill silo storage.',
         ]);
 
@@ -450,7 +482,12 @@ class DatabaseSeeder extends Seeder
             'payment_status' => 'PAID',
             'payment_method' => 'LETTER_OF_CREDIT',
             'payment_reference' => 'LC-CITI-2026-88091',
+            'paid_at' => $s3Departure->copy()->subDays(2),
             'freight_charge_usd' => 2862000.00,
+            'commodity_price_usd' => 24030000.00,
+            'vessel_fee_usd' => 1890000.00,
+            'gross_amount_usd' => 26892000.00,
+            'net_revenue_usd' => 25002000.00,
             'notes' => 'US Yellow Soybeans #2 for crush plant delivery in Shandong.',
         ]);
 
@@ -532,7 +569,12 @@ class DatabaseSeeder extends Seeder
             'payment_status' => 'PAID',
             'payment_method' => 'VIRTUAL_ACCOUNT',
             'payment_reference' => 'VA-BNI-2026-55310',
+            'paid_at' => $now->copy()->subHours(12),
             'freight_charge_usd' => 375000.00,
+            'commodity_price_usd' => 7250000.00,
+            'vessel_fee_usd' => 250000.00,
+            'gross_amount_usd' => 7625000.00,
+            'net_revenue_usd' => 7375000.00,
             'notes' => 'Thai Hom Mali Jasmine Rice (Jumbo Bags). Stored in climate-monitored hold.',
         ]);
 
@@ -558,6 +600,9 @@ class DatabaseSeeder extends Seeder
             'event_time' => $now->copy()->subHours(12),
             'created_by' => $operator->id,
         ]);
+
+        // Scenario 5: Rice Purchase awaiting Payment Gateway Checkout (Demonstrates Payment Lock -> Tracking Unlock)
+        $this->seedPendingRiceShowcase($customer1, $carrierModels, $locationModels, $now);
         // 5. Create In-App Notifications
         Notification::create([
             'user_id' => $customer1->id,
@@ -592,5 +637,69 @@ class DatabaseSeeder extends Seeder
         AuditService::log('SHIPMENT_CREATED', $s1, null, $s1->toArray(), $operator);
         AuditService::log('SHIPMENT_CREATED', $s2, null, $s2->toArray(), $operator);
         AuditService::log('SHIPMENT_DELIVERED', $s3, null, ['status' => 'DELIVERED'], $operator);
+    }
+
+    /**
+     * Seed the unpaid demo Rice purchase order (CT-2026-RIC05) idempotently
+     * so evaluators can test the Payment Gateway -> Tracking Unlock gate.
+     */
+    private function seedPendingRiceShowcase(User $customer1, array $carrierModels, array $locationModels, Carbon $now): void
+    {
+        if (Shipment::withTrashed()->where('shipment_number', 'CT-2026-RIC05')->exists()) {
+            return;
+        }
+
+        $s5 = Shipment::create([
+            'shipment_number' => 'CT-2026-RIC05',
+            'customer_id' => $customer1->id,
+            'carrier_id' => $carrierModels['CMA']->id,
+            'origin_id' => $locationModels['THBKK']->id,
+            'destination_id' => $locationModels['IDTPP']->id,
+            'current_location_id' => $locationModels['THBKK']->id,
+            'cargo_type' => 'Rice',
+            'weight' => 500.00,
+            'volume' => 675.00,
+            'expected_departure' => $now->copy()->addDays(2),
+            'expected_arrival' => $now->copy()->addDays(9),
+            'estimated_arrival' => $now->copy()->addDays(9),
+            'current_status' => Shipment::STATUS_CREATED,
+            'delay_status' => 'ON_TIME',
+            'delay_duration_hours' => 0,
+            'delay_severity' => 'NONE',
+            'delay_reason' => 'Awaiting payment gateway settlement before vessel allocation.',
+            'payment_status' => 'PENDING',
+            'payment_method' => 'QRIS_REALTIME',
+            'payment_reference' => null,
+            'paid_at' => null,
+            'freight_charge_usd' => 22500.00,
+            'commodity_price_usd' => 290000.00,
+            'vessel_fee_usd' => 14000.00,
+            'gross_amount_usd' => 312500.00,
+            'net_revenue_usd' => 298500.00,
+            'notes' => 'Pending customer Rice purchase order. Vessel tracking unlocks upon payment confirmation.',
+        ]);
+
+        $s5->items()->create([
+            'item_description' => 'Premium Jasmine White Rice (500 MT Order)',
+            'grade_specification' => 'Export Grade A, Moisture 13.5% Max',
+            'quantity' => 500,
+            'weight' => 500.00,
+            'volume' => 675.00,
+            'moisture_content_percent' => 13.20,
+            'hs_code' => '1006.30.90',
+            'package_type' => 'JUMBO_BAGS',
+        ]);
+
+        $s5->trackingEvents()->create([
+            'event_type' => 'STATUS_UPDATE',
+            'status' => 'CREATED',
+            'location_id' => $locationModels['THBKK']->id,
+            'location_name' => 'Laem Chabang Export Terminal',
+            'latitude' => 13.0827,
+            'longitude' => 100.8833,
+            'description' => 'Customer purchase order registered. Awaiting payment settlement to allocate vessel hold.',
+            'event_time' => $now->copy()->subHours(2),
+            'created_by' => $customer1->id,
+        ]);
     }
 }

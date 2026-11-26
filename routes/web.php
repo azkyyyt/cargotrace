@@ -7,8 +7,10 @@ use App\Http\Controllers\ConfigurationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExceptionController;
 use App\Http\Controllers\ExternalApiController;
+use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\TrackingEventController;
 use App\Http\Controllers\UserManagementController;
@@ -57,6 +59,21 @@ Route::middleware('auth')->group(function () {
         // Exceptions
         Route::post('/shipments/{id}/exceptions', [ExceptionController::class, 'store'])->name('exceptions.store');
         Route::patch('/exceptions/{id}', [ExceptionController::class, 'update'])->name('exceptions.update');
+    });
+
+    // Customer Commodity Purchase & Payment Gateway (Customer ONLY)
+    Route::middleware('role:customer')->group(function () {
+        Route::get('/shop', [PurchaseController::class, 'index'])->name('shop.index');
+        Route::post('/shop', [PurchaseController::class, 'store'])->name('shop.store');
+        Route::get('/shipments/{id}/payment', [PurchaseController::class, 'showPayment'])->name('shipments.payment');
+        Route::post('/shipments/{id}/pay', [PurchaseController::class, 'processPayment'])->name('shipments.pay');
+    });
+
+    // Revenue & Financial Ledger + Excel/CSV Reporting (Admin & Logistics Operator)
+    Route::middleware('role:admin,operator')->group(function () {
+        Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
+        Route::get('/finance/export/xlsx', [FinanceController::class, 'exportXlsx'])->name('finance.export.xlsx');
+        Route::get('/finance/export/csv', [FinanceController::class, 'exportCsv'])->name('finance.export.csv');
     });
 
     // Shipments & Exceptions View (Admin views all, Operator views all, Customer strictly scoped to own)

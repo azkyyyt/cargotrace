@@ -154,10 +154,19 @@
                                         default => 'bg-amber-100 text-amber-800 border-amber-200',
                                     };
                                 @endphp
-                                <div>
+                                <div class="flex flex-wrap items-center gap-1.5">
                                     <span class="px-2.5 py-0.5 rounded text-[10px] font-bold border {{ $badgeClass }}">
                                         {{ $s->current_status }}
                                     </span>
+                                    @if($s->payment_status === 'PAID')
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                            PAID
+                                        </span>
+                                    @else
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                            UNPAID
+                                        </span>
+                                    @endif
                                 </div>
                             </td>
                             <td class="py-3.5 px-4">
@@ -174,6 +183,11 @@
                                 @endif
                             </td>
                             <td class="py-3.5 px-4 text-right space-x-1 whitespace-nowrap">
+                                @if(Auth::user()->isCustomer() && !$s->isPaid())
+                                    <a href="{{ route('shipments.payment', $s->id) }}" class="inline-block bg-slate-900 hover:bg-slate-800 text-white px-2.5 py-1 rounded font-semibold transition">
+                                        Pay Now
+                                    </a>
+                                @endif
                                 <a href="{{ route('shipments.show', $s->id) }}" class="inline-block bg-sky-50 hover:bg-sky-100 text-sky-700 px-2.5 py-1 rounded font-medium transition">
                                     Details &rarr;
                                 </a>

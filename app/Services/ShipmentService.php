@@ -36,6 +36,27 @@ class ShipmentService
                 $data['estimated_arrival'] = $data['expected_arrival'];
             }
 
+            // Compute baseline accounting metrics if not provided
+            $weight = (float) ($data['weight'] ?? 0);
+            if (empty($data['commodity_price_usd'])) {
+                $unitRate = match (strtolower($data['cargo_type'] ?? '')) {
+                    'rice' => 580.00,
+                    'wheat' => 275.00,
+                    'corn' => 215.00,
+                    'soybeans' => 445.00,
+                    default => 250.00,
+                };
+                $data['commodity_price_usd'] = round($weight * $unitRate, 2);
+            }
+            $data['freight_charge_usd'] = $data['freight_charge_usd'] ?? round($weight * 45.00, 2);
+            $data['vessel_fee_usd'] = $data['vessel_fee_usd'] ?? round($weight * 28.00, 2);
+            $data['gross_amount_usd'] = $data['gross_amount_usd'] ?? round($data['commodity_price_usd'] + $data['freight_charge_usd'], 2);
+            $data['net_revenue_usd'] = $data['net_revenue_usd'] ?? max(0, round($data['gross_amount_usd'] - $data['vessel_fee_usd'], 2));
+            $data['payment_status'] = $data['payment_status'] ?? 'PAID';
+            if ($data['payment_status'] === 'PAID' && empty($data['paid_at'])) {
+                $data['paid_at'] = now();
+            }
+
             $shipment = new Shipment($data);
             $this->etaService->applyEvaluation($shipment);
             $shipment->save();
@@ -231,7 +252,8 @@ class ShipmentService
     public function createGrainBooking(array $data, User $customer): Shipment
     {
         return DB::transaction(function () use ($data, $customer) {
-            $prefix = match (strtoupper($data['cargo_type'] ?? 'CORN')) {
+            $cargo = ucfirst(strtolower($data['cargo_type'] ?? 'Rice'));
+            $prefix = match (strtoupper($cargo)) {
                 'WHEAT' => 'CT-2026-WHT',
                 'CORN' => 'CT-2026-CRN',
                 'SOYBEANS' => 'CT-2026-SOY',
@@ -239,12 +261,32 @@ class ShipmentService
                 default => 'CT-2026-GRN',
             };
 
+            $unitPrice = match (strtoupper($cargo)) {
+                'RICE' => 580.00,
+                'WHEAT' => 275.00,
+                'CORN' => 215.00,
+                'SOYBEANS' => 445.00,
+                default => 250.00,
+            };
+
+            $hsCode = match (strtoupper($cargo)) {
+                'RICE' => '1006.30.90',
+                'WHEAT' => '1001.99.10',
+                'CORN' => '1005.90.00',
+                'SOYBEANS' => '1201.90.00',
+                default => '1005.90.00',
+            };
+
             $shipmentNumber = $prefix . strtoupper(bin2hex(random_bytes(3)));
             $departure = now()->addDays(2);
-            $arrival = $departure->copy()->addDays(26);
+            $arrival = $departure->copy()->addDays(18);
 
-            $weight = (float) ($data['weight'] ?? 25000.0); // e.g. 25,000 MT
-            $freightCharge = round($weight * 48.50, 2); // $48.50 per MT bulk freight ocean rate
+            $weight = (float) ($data['weight'] ?? 500.0);
+            $commodityPrice = round($weight * $unitPrice, 2);
+            $freightCharge = round($weight * 45.00, 2); // Freight rate billed
+            $vesselFee = round($weight * 28.00, 2); // Vessel charter cost
+            $grossAmount = round($commodityPrice + $freightCharge, 2);
+            $netRevenue = max(0, round($grossAmount - $vesselFee, 2));
 
             $shipment = new Shipment([
                 'shipment_number' => $shipmentNumber,
@@ -253,7 +295,7 @@ class ShipmentService
                 'origin_id' => $data['origin_id'],
                 'destination_id' => $data['destination_id'],
                 'current_location_id' => $data['origin_id'],
-                'cargo_type' => $data['cargo_type'] ?? 'Corn',
+                'cargo_type' => $cargo,
                 'weight' => $weight,
                 'volume' => round($weight * 1.35, 2),
                 'expected_departure' => $departure,
@@ -263,54 +305,60 @@ class ShipmentService
                 'delay_status' => 'ON_TIME',
                 'delay_duration_hours' => 0,
                 'delay_severity' => 'NONE',
+                'delay_reason' => 'Awaiting customer payment settlement before vessel allocation.',
                 'payment_status' => 'PENDING',
-                'payment_method' => $data['payment_method'] ?? 'QRIS_REALTIME',
-                'payment_reference' => 'PAY-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(4))),
+                'payment_method' => $data['payment_method'] ?? null,
+                'payment_reference' => null,
+                'paid_at' => null,
+                'commodity_price_usd' => $commodityPrice,
                 'freight_charge_usd' => $freightCharge,
-                'notes' => $data['notes'] ?? 'Grain Bulk Freight Contract Order - International Port Discharge',
+                'vessel_fee_usd' => $vesselFee,
+                'gross_amount_usd' => $grossAmount,
+                'net_revenue_usd' => $netRevenue,
+                'notes' => $data['notes'] ?? "Customer {$cargo} purchase contract. Vessel tracking unlocks after payment.",
             ]);
 
             $shipment->save();
 
-            // Create detailed grain commodity item
+            // Create detailed commodity manifest item
             $shipment->items()->create([
-                'item_description' => ($data['cargo_type'] ?? 'Grain') . ' Bulk Consignment Grade #2',
-                'grade_specification' => $data['grade_specification'] ?? 'Export Standard Bulk (Moisture 13.5% Max)',
-                'quantity' => 1,
+                'item_description' => "{$cargo} Bulk Purchase Order",
+                'grade_specification' => $data['grade_specification'] ?? 'Export Grade A Standard',
+                'quantity' => (int) max(1, round($weight)),
                 'weight' => $weight,
                 'volume' => round($weight * 1.35, 2),
-                'moisture_content_percent' => 12.8,
-                'hs_code' => $data['hs_code'] ?? '1005.90.00',
+                'moisture_content_percent' => 13.0,
+                'hs_code' => $hsCode,
                 'package_type' => 'BULK_VESSEL_HOLD',
             ]);
 
-            // Initial tracking checkpoint
+            // Initial tracking checkpoint (Awaiting payment)
             $shipment->trackingEvents()->create([
                 'event_type' => 'STATUS_UPDATE',
                 'status' => Shipment::STATUS_CREATED,
                 'location_id' => $shipment->origin_id,
-                'location_name' => $shipment->origin ? $shipment->origin->name : 'Origin Loading Silos',
+                'location_name' => $shipment->origin ? $shipment->origin->name : 'Origin Port Terminal',
                 'latitude' => $shipment->origin ? $shipment->origin->latitude : null,
                 'longitude' => $shipment->origin ? $shipment->origin->longitude : null,
-                'description' => "Consignment order placed by {$customer->name}. Awaiting freight payment settlement.",
+                'description' => "Purchase order placed by {$customer->name}. Pending Payment Gateway verification.",
                 'event_time' => now(),
                 'created_by' => $customer->id,
             ]);
 
-            AuditService::log('GRAIN_BOOKING_CREATED', $shipment, null, $shipment->toArray(), $customer);
+            AuditService::log('COMMODITY_ORDER_CREATED', $shipment, null, $shipment->toArray(), $customer);
 
             return $shipment->fresh(['customer', 'carrier', 'origin', 'destination', 'items', 'trackingEvents']);
         });
     }
 
     /**
-     * Process Real-Time Simulated Payment Gateway
-     * Confirms simulated QRIS / VA / L/C payment and immediately triggers dispatch to sea routes
+     * Process Payment Gateway Settlement
+     * Verifies simulated QRIS / VA / L/C payment, sets paid_at, books vessel hold, and unlocks live map tracking.
      */
     public function processSimulatedPayment(Shipment $shipment, string $paymentMethod, ?User $actor = null): Shipment
     {
         return DB::transaction(function () use ($shipment, $paymentMethod, $actor) {
-            $prefix = match($paymentMethod) {
+            $prefix = match ($paymentMethod) {
                 'QRIS_REALTIME' => 'QRIS',
                 'VIRTUAL_ACCOUNT' => 'VA',
                 'LETTER_OF_CREDIT' => 'LC',
@@ -320,10 +368,11 @@ class ShipmentService
             $shipment->payment_status = 'PAID';
             $shipment->payment_method = $paymentMethod;
             $shipment->payment_reference = $prefix . '-' . date('YmdHis') . '-' . strtoupper(bin2hex(random_bytes(3)));
+            $shipment->paid_at = now();
 
-            // Transition status to BOOKED and PICKED_UP
             if ($shipment->current_status === Shipment::STATUS_CREATED) {
                 $shipment->current_status = Shipment::STATUS_BOOKED;
+                $shipment->delay_reason = 'Payment settled. Vessel berth allocated on ocean schedule.';
             }
 
             $shipment->save();
@@ -332,21 +381,21 @@ class ShipmentService
                 'event_type' => 'CHECKPOINT',
                 'status' => Shipment::STATUS_BOOKED,
                 'location_id' => $shipment->origin_id,
-                'location_name' => $shipment->origin ? $shipment->origin->name : 'Export Terminal Silos',
+                'location_name' => $shipment->origin ? $shipment->origin->name : 'Export Port Terminal',
                 'latitude' => $shipment->origin ? $shipment->origin->latitude : null,
                 'longitude' => $shipment->origin ? $shipment->origin->longitude : null,
-                'description' => "[PAYMENT GATEWAY SIMULATION] Real-time payment settlement verified via {$paymentMethod}. Ref: {$shipment->payment_reference}. Cargo allocated to vessel hold.",
+                'description' => "Payment verified via {$paymentMethod} (Ref: {$shipment->payment_reference}). Vessel cargo space confirmed and live tracking unlocked.",
                 'event_time' => now(),
                 'created_by' => $actor ? $actor->id : $shipment->customer_id,
             ]);
 
-            AuditService::log('PAYMENT_SETTLED', $shipment, ['payment_status' => 'PENDING'], ['payment_status' => 'PAID', 'ref' => $shipment->payment_reference], $actor);
+            AuditService::log('PAYMENT_SETTLED', $shipment, ['payment_status' => 'PENDING'], ['payment_status' => 'PAID', 'ref' => $shipment->payment_reference, 'gross_usd' => $shipment->gross_amount_usd], $actor);
 
             if ($shipment->customer) {
                 NotificationService::send(
                     $shipment->customer,
                     "Payment Confirmed: {$shipment->shipment_number}",
-                    "Your simulated freight payment for {$shipment->shipment_number} was confirmed. Vessel booking active on map.",
+                    "Payment settled via {$paymentMethod}. Live vessel tracking for {$shipment->shipment_number} is now unlocked.",
                     'success',
                     "/shipments/{$shipment->id}"
                 );

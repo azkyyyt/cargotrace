@@ -182,17 +182,25 @@ class ShipmentController extends Controller
             }
         }
 
-        $vesselInfo = [
-            'lat' => $currentLat,
-            'lng' => $currentLng,
-            'name' => $currentLocationName,
-            'heading' => round($vesselHeading, 1),
-            'status' => $shipment->current_status,
-            'transport_mode' => $shipment->carrier?->transport_mode ?? 'SEA',
-            'carrier_name' => $shipment->carrier?->name ?? 'Carrier',
-            'has_exception' => $shipment->exceptions->where('status', '!=', 'RESOLVED')->count() > 0,
-            'progress' => round($voyageProgress, 4),
-        ];
+        $trackingUnlocked = !$user->isCustomer() || $shipment->isPaid();
+
+        if (!$trackingUnlocked) {
+            $mapPoints = [];
+            $corridorPath = [];
+            $vesselInfo = null;
+        } else {
+            $vesselInfo = [
+                'lat' => $currentLat,
+                'lng' => $currentLng,
+                'name' => $currentLocationName,
+                'heading' => round($vesselHeading, 1),
+                'status' => $shipment->current_status,
+                'transport_mode' => $shipment->carrier?->transport_mode ?? 'SEA',
+                'carrier_name' => $shipment->carrier?->name ?? 'Carrier',
+                'has_exception' => $shipment->exceptions->where('status', '!=', 'RESOLVED')->count() > 0,
+                'progress' => round($voyageProgress, 4),
+            ];
+        }
 
         $carriers = Carrier::where('is_active', true)->get();
         $locations = Location::all();
@@ -200,6 +208,7 @@ class ShipmentController extends Controller
 
         return view('shipments.show', compact(
             'shipment',
+            'trackingUnlocked',
             'originWeather',
             'destinationWeather',
             'mapPoints',

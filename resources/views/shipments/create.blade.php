@@ -22,10 +22,10 @@
         </a>
     </div>
 
-    <!-- 1-Click Fast Demonstration Presets Bar -->
-    <div class="bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 text-white rounded-2xl p-5 shadow-lg border border-slate-800">
-        <div class="flex items-center space-x-2 text-amber-400 font-bold text-xs uppercase tracking-wider mb-2">
-            <span>⚡ 1-Click UAS Demonstration Presets (Click to Auto-Fill):</span>
+    <!-- Quick Cargo Lane Presets -->
+    <div class="bg-slate-900 text-white rounded-lg p-5 shadow-sm border border-slate-800">
+        <div class="flex items-center space-x-2 text-sky-400 font-semibold text-xs uppercase tracking-wider mb-2.5">
+            <span>Quick Trade Lane Presets (Click to Pre-Fill):</span>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
             <!-- Preset 1: Corn Brazil -> Indonesia -->

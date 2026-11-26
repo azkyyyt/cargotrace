@@ -28,9 +28,24 @@
                         default => 'bg-amber-100 text-amber-800 border-amber-300',
                     };
                 @endphp
-                <span class="px-3 py-1 rounded-full text-xs font-extrabold border {{ $badgeClass }}">
+                <span class="px-3 py-1 rounded-md text-xs font-bold border {{ $badgeClass }}">
                     {{ $shipment->current_status }}
                 </span>
+
+                @if($shipment->isPaid())
+                    <span class="px-3 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        PAID &bull; Tracking Active
+                    </span>
+                @else
+                    <span class="px-3 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                        UNPAID &bull; Tracking Locked
+                    </span>
+                    @if(Auth::user()->isCustomer())
+                        <a href="{{ route('shipments.payment', $shipment->id) }}" class="px-3 py-1 rounded-md text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white transition">
+                            Settle Payment (${{ number_format($shipment->gross_amount_usd, 2) }})
+                        </a>
+                    @endif
+                @endif
             </div>
         </div>
 
@@ -149,9 +164,9 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <!-- Origin Weather with Sky Banner -->
-                <div class="p-4 bg-gradient-to-br from-slate-800 via-slate-900 to-sky-950 text-white rounded-xl border border-slate-700 shadow-sm relative overflow-hidden flex flex-col justify-between">
-                    <div class="absolute right-2 -bottom-2 w-20 h-20 opacity-20 pointer-events-none">
+                <!-- Origin Weather -->
+                <div class="p-4 bg-slate-900 text-white rounded-lg border border-slate-800 shadow-sm relative overflow-hidden flex flex-col justify-between">
+                    <div class="absolute right-2 -bottom-2 w-20 h-20 opacity-15 pointer-events-none">
                         <svg viewBox="0 0 100 100" class="w-full h-full"><path d="M20 65 a18 18 0 0 1 14 -30 a24 24 0 0 1 42 4 a18 18 0 0 1 14 26 z" fill="#38bdf8" /></svg>
                     </div>
                     <div>
@@ -171,9 +186,9 @@
                     </div>
                 </div>
 
-                <!-- Destination Weather with Sky Banner -->
-                <div class="p-4 bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-950 text-white rounded-xl border border-slate-700 shadow-sm relative overflow-hidden flex flex-col justify-between">
-                    <div class="absolute right-2 -bottom-2 w-20 h-20 opacity-20 pointer-events-none">
+                <!-- Destination Weather -->
+                <div class="p-4 bg-slate-900 text-white rounded-lg border border-slate-800 shadow-sm relative overflow-hidden flex flex-col justify-between">
+                    <div class="absolute right-2 -bottom-2 w-20 h-20 opacity-15 pointer-events-none">
                         <svg viewBox="0 0 100 100" class="w-full h-full"><path d="M20 65 a18 18 0 0 1 14 -30 a24 24 0 0 1 42 4 a18 18 0 0 1 14 26 z" fill="#818cf8" /></svg>
                     </div>
                     <div>
@@ -201,61 +216,102 @@
         </div>
     </div>
 
-    <!-- Leaflet Interactive Map View (Esri HD English Basemap + Navigable Sea Corridors) -->
-    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-                <h3 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
-                    <span>Interactive Nautical Route &amp; Vessel Tracking Map</span>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-800">HD English Labels</span>
-                </h3>
-                <p class="text-xs text-slate-500">Leaflet.js &bull; High-Definition Global Basemap &bull; Navigable Sea Lanes &bull; Live Vessel Position &amp; Bearing</p>
-            </div>
-            <div class="flex items-center space-x-2">
-                <span class="text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded font-mono font-bold">
-                    {{ count($mapPoints) }} Waypoints
-                </span>
-                <span class="text-xs bg-sky-100 text-sky-800 px-2.5 py-1 rounded font-bold">
-                    Single World (No Wrap)
-                </span>
-            </div>
-        </div>
-
-        <!-- Map Canvas with Ocean Background and Live AIS Satellite Telemetry HUD -->
-        <div class="relative">
-            <div id="shipmentMap" class="w-full h-80 sm:h-96 rounded-xl border border-slate-300 shadow-inner z-10" style="background: #a5bfdd;"></div>
-            
-            <!-- Real-Time Floating AIS HUD -->
-            <div class="absolute bottom-3 left-3 right-3 sm:right-auto z-20 bg-slate-900/95 backdrop-blur-md text-white p-3 rounded-xl border border-white/20 shadow-xl flex flex-wrap items-center gap-3 text-xs">
+    <!-- Leaflet Interactive Map View (Tracking Gate: Locked for Customers until Payment Settles) -->
+    <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-3">
+        @if($trackingUnlocked)
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                        <span>Interactive Nautical Route &amp; Vessel Tracking Map</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-800">HD English Labels</span>
+                    </h3>
+                    <p class="text-xs text-slate-500">Leaflet.js &bull; Navigable Sea Lanes &bull; Live Vessel Position &amp; Bearing</p>
+                </div>
                 <div class="flex items-center space-x-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span class="font-black text-sky-300 tracking-wider text-[11px] uppercase">LIVE AIS SATELLITE HUD</span>
-                </div>
-                <div class="h-4 w-px bg-slate-700 hidden sm:block"></div>
-                <div>
-                    <span class="text-slate-400 text-[10px] block">Steaming Speed</span>
-                    <span id="aisSpeedDisplay" class="font-mono font-bold text-amber-300">14.8 kts</span>
-                </div>
-                <div>
-                    <span class="text-slate-400 text-[10px] block">Course Bearing</span>
-                    <span id="aisHeadingDisplay" class="font-mono font-bold text-sky-300">112.3°</span>
-                </div>
-                <div class="max-w-[150px] truncate">
-                    <span class="text-slate-400 text-[10px] block">Navigational Fairway</span>
-                    <span id="aisSectorDisplay" class="font-bold text-slate-100 block truncate">Underway Transit</span>
-                </div>
-                <div>
-                    <span class="text-slate-400 text-[10px] block">Voyage Progress</span>
-                    <span id="aisProgressDisplay" class="font-mono font-bold text-emerald-300">42.5%</span>
-                </div>
-                <div class="flex items-center space-x-1 ml-auto">
-                    <button type="button" id="btnSpeed1x" class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-600 text-white hover:bg-sky-500 transition">1x Real</button>
-                    <button type="button" id="btnSpeed5x" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">5x Cruise</button>
-                    <button type="button" id="btnSpeed20x" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">20x Sim</button>
-                    <button type="button" id="btnPlayPause" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">⏸️</button>
+                    <span class="text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded font-mono font-bold">
+                        {{ count($mapPoints) }} Waypoints
+                    </span>
+                    <span class="text-xs bg-sky-100 text-sky-800 px-2.5 py-1 rounded font-bold">
+                        Single World
+                    </span>
                 </div>
             </div>
-        </div>
+
+            <!-- Map Canvas with Ocean Background and Live AIS Satellite Telemetry HUD -->
+            <div class="relative">
+                <div id="shipmentMap" class="w-full h-80 sm:h-96 rounded-lg border border-slate-300 shadow-inner z-10" style="background: #a5bfdd;"></div>
+                
+                <!-- Real-Time Floating AIS HUD -->
+                <div class="absolute bottom-3 left-3 right-3 sm:right-auto z-20 bg-slate-900 text-white p-3 rounded-lg border border-slate-700 shadow-lg flex flex-wrap items-center gap-3 text-xs">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                        <span class="font-bold text-sky-300 tracking-wider text-[11px] uppercase">AIS TELEMETRY</span>
+                    </div>
+                    <div class="h-4 w-px bg-slate-700 hidden sm:block"></div>
+                    <div>
+                        <span class="text-slate-400 text-[10px] block">Steaming Speed</span>
+                        <span id="aisSpeedDisplay" class="font-mono font-bold text-amber-300">14.8 kts</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 text-[10px] block">Course Bearing</span>
+                        <span id="aisHeadingDisplay" class="font-mono font-bold text-sky-300">112.3°</span>
+                    </div>
+                    <div class="max-w-[150px] truncate">
+                        <span class="text-slate-400 text-[10px] block">Navigational Fairway</span>
+                        <span id="aisSectorDisplay" class="font-bold text-slate-100 block truncate">Underway Transit</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 text-[10px] block">Voyage Progress</span>
+                        <span id="aisProgressDisplay" class="font-mono font-bold text-emerald-300">42.5%</span>
+                    </div>
+                    <div class="flex items-center space-x-1 ml-auto">
+                        <button type="button" id="btnSpeed1x" class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-600 text-white hover:bg-sky-500 transition">1x Real</button>
+                        <button type="button" id="btnSpeed5x" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">5x Cruise</button>
+                        <button type="button" id="btnSpeed20x" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">20x Sim</button>
+                        <button type="button" id="btnPlayPause" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">Pause</button>
+                    </div>
+                </div>
+            </div>
+        @else
+            <!-- Payment Gate Lock Panel -->
+            <div class="p-6 sm:p-8 bg-slate-50 border border-slate-200 rounded-lg text-center space-y-4">
+                <div class="w-12 h-12 rounded-lg bg-slate-900 text-white flex items-center justify-center mx-auto">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </div>
+                <div class="max-w-lg mx-auto space-y-1.5">
+                    <h3 class="text-base font-bold text-slate-900">Vessel Tracking Locked Pending Payment Settlement</h3>
+                    <p class="text-xs text-slate-600 leading-relaxed">
+                        Purchase order <strong class="font-mono text-slate-900">{{ $shipment->shipment_number }}</strong> ({{ $shipment->cargo_type }}, {{ number_format($shipment->weight, 0) }} MT) has not cleared Payment Gateway verification. Settle your commercial invoice to confirm vessel allocation and unlock live maritime route tracking.
+                    </p>
+                </div>
+
+                <div class="max-w-md mx-auto bg-white border border-slate-200 rounded-md p-4 text-xs space-y-2 text-left">
+                    <div class="flex justify-between text-slate-600">
+                        <span>Commodity Contract Value</span>
+                        <span class="font-medium text-slate-900 tabular-nums">${{ number_format($shipment->commodity_price_usd, 2) }}</span>
+                    </div>
+                    <div class="flex justify-between text-slate-600">
+                        <span>Ocean Freight Allocation</span>
+                        <span class="font-medium text-slate-900 tabular-nums">${{ number_format($shipment->freight_charge_usd, 2) }}</span>
+                    </div>
+                    <div class="pt-2 border-t border-slate-200 flex justify-between font-bold text-slate-900 text-sm">
+                        <span>Total Settlement Due (USD)</span>
+                        <span class="tabular-nums">${{ number_format($shipment->gross_amount_usd, 2) }}</span>
+                    </div>
+                </div>
+
+                <div>
+                    <a href="{{ route('shipments.payment', $shipment->id) }}" class="inline-flex items-center space-x-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-md transition">
+                        <span>Proceed to Payment Gateway</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        @endif
     </div>
 
     <!-- Consignment Specs, Items, Timeline & Exceptions Grid -->
@@ -695,12 +751,17 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+        const mapEl = document.getElementById('shipmentMap');
+        if (!mapEl) {
+            return;
+        }
+
         const points = {!! json_encode($mapPoints) !!};
         const corridor = {!! json_encode($corridorPath ?? []) !!};
         const vessel = {!! json_encode($vesselInfo ?? null) !!};
 
         if (points.length === 0 && corridor.length === 0) {
-            document.getElementById('shipmentMap').innerHTML = '<div class="h-full flex items-center justify-center text-slate-400 text-xs">No GPS coordinates available for this lane.</div>';
+            mapEl.innerHTML = '<div class="h-full flex items-center justify-center text-slate-400 text-xs">No GPS coordinates available for this lane.</div>';
             return;
         }
 
