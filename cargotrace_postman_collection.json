@@ -8,6 +8,11 @@
 	"variable": [
 		{
 			"key": "baseUrl",
+			"value": "https://azkiaakbar.up.railway.app/api",
+			"type": "string"
+		},
+		{
+			"key": "localUrl",
 			"value": "http://127.0.0.1:8000/api",
 			"type": "string"
 		},
@@ -37,7 +42,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"John Doe Logistics\",\n    \"email\": \"johndoe@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\",\n    \"role\": \"customer\",\n    \"company\": \"Pacific Traders Inc\",\n    \"phone\": \"+62 812-3456-7890\"\n}"
+							"raw": "{\n    \"name\": \"John Doe Logistics\",\n    \"email\": \"johndoe@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\",\n    \"company\": \"Pacific Traders Inc\",\n    \"phone\": \"+62 812-3456-7890\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/register",
@@ -87,6 +92,20 @@
 				},
 				{
 					"name": "Login (Operator)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.token) {",
+									"    pm.collectionVariables.set('bearerToken', jsonData.data.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -211,7 +230,7 @@
 					}
 				},
 				{
-					"name": "Create Shipment (Operator/Admin)",
+					"name": "Create Shipment (Operator Only)",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -536,6 +555,41 @@
 					}
 				},
 				{
+					"name": "Create Carrier (Admin Only)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{bearerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"code\": \"HLC\",\n    \"name\": \"Hapag-Lloyd Container Line\",\n    \"transport_mode\": \"SEA\",\n    \"contact_email\": \"ops@hapag.example.com\",\n    \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/carriers",
+							"host": ["{{baseUrl}}"],
+							"path": ["carriers"]
+						}
+					}
+				},
+				{
 					"name": "List Geographic Hub Locations",
 					"request": {
 						"auth": {
@@ -555,6 +609,41 @@
 								"value": "application/json"
 							}
 						],
+						"url": {
+							"raw": "{{baseUrl}}/locations",
+							"host": ["{{baseUrl}}"],
+							"path": ["locations"]
+						}
+					}
+				},
+				{
+					"name": "Create Location (Admin Only)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{bearerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"code\": \"IDBLW\",\n    \"name\": \"Port of Belawan\",\n    \"city\": \"Medan\",\n    \"country\": \"Indonesia\",\n    \"type\": \"PORT\",\n    \"latitude\": 3.7885,\n    \"longitude\": 98.6852,\n    \"address\": \"Belawan Container & Bulk Terminal, Medan\"\n}"
+						},
 						"url": {
 							"raw": "{{baseUrl}}/locations",
 							"host": ["{{baseUrl}}"],

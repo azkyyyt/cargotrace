@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Carrier;
+use App\Models\Setting;
 use App\Models\Shipment;
 use App\Models\ShipmentException;
 use App\Models\TrackingEvent;
@@ -45,6 +46,19 @@ class DashboardController extends Controller
 
         $avgDelayDuration = (clone $shipmentQuery)->where('delay_status', 'DELAYED')->avg('delay_duration_hours') ?? 0;
         $avgDelayDuration = round($avgDelayDuration, 1);
+
+        $shipmentsWithExceptions = (clone $shipmentQuery)->whereHas('exceptions')->count();
+        $exceptionRate = $totalShipments > 0
+            ? round(($shipmentsWithExceptions / $totalShipments) * 100, 1)
+            : 0.0;
+
+        $resolvedEx = (clone $exceptionQuery)->where('status', ShipmentException::STATUS_RESOLVED)->whereNotNull('resolved_at')->get();
+        $avgResolutionHours = $resolvedEx->count() > 0
+            ? round($resolvedEx->avg(fn ($ex) => $ex->detected_at ? $ex->detected_at->diffInHours($ex->resolved_at) : 0), 1)
+            : 0.0;
+
+        $groupThreshold = (int) Setting::getValue('group_delay_threshold_hours', config('services.cargo.group_threshold', 18));
+        $activeScenario = (string) Setting::getValue('active_group_scenario', 'Group B (18h Threshold)');
 
         // Chart Data 1: Shipments by Status
         $statuses = [
@@ -219,7 +233,11 @@ class DashboardController extends Controller
             'resolvedExceptionsCount',
             'onTimeDeliveryRate',
             'delayRate',
+            'exceptionRate',
             'avgDelayDuration',
+            'avgResolutionHours',
+            'groupThreshold',
+            'activeScenario',
             'statusCounts',
             'carrierLabels',
             'carrierData',

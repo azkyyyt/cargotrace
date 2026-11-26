@@ -12,7 +12,7 @@
             <p class="text-xs text-slate-500 mt-1">Geographic nodes and terminals used for grain routes &bull; Google Maps-style location search integrated</p>
         </div>
         @if(Auth::user()->isAdmin())
-            <button type="button" @click="addLocationModal = true; initPickerMap();" class="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition">
+            <button type="button" @click="openAddModal()" class="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 <span>Add Node Location</span>
             </button>
@@ -31,6 +31,7 @@
                         <th class="py-3 px-4">City &amp; Country</th>
                         <th class="py-3 px-4">GPS Coordinates (Lat / Lng)</th>
                         <th class="py-3 px-4">Outbound / Inbound</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-700">
@@ -64,10 +65,24 @@
                                 <span class="text-sky-700">{{ $loc->outbound_shipments_count }} out</span> &bull; 
                                 <span class="text-emerald-700">{{ $loc->inbound_shipments_count }} in</span>
                             </td>
+                            <td class="py-3.5 px-4 text-right whitespace-nowrap space-x-1">
+                                @if(Auth::user()->isAdmin())
+                                    <button type="button" @click="openEditModal({{ json_encode(['id' => $loc->id, 'code' => $loc->code, 'type' => $loc->type, 'name' => $loc->name, 'city' => $loc->city, 'country' => $loc->country, 'latitude' => $loc->latitude, 'longitude' => $loc->longitude, 'address' => $loc->address]) }})" class="text-xs bg-sky-50 hover:bg-sky-100 text-sky-700 font-semibold px-2.5 py-1 rounded transition">
+                                        Edit
+                                    </button>
+                                    @if(($loc->outbound_shipments_count + $loc->inbound_shipments_count) === 0)
+                                        <form action="{{ route('locations.destroy', $loc->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Delete location {{ $loc->name }}?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 px-2 py-1 rounded transition">Delete</button>
+                                        </form>
+                                    @endif
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center py-8 text-slate-400">No hub locations registered.</td>
+                            <td colspan="7" class="text-center py-8 text-slate-400">No hub locations registered.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -86,7 +101,7 @@
                 <div>
                     <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
                         <span class="text-amber-500">📍</span>
-                        <span>Add Terminal / Port Location</span>
+                        <span x-text="isEditing ? 'Edit Terminal / Port Location' : 'Add Terminal / Port Location'"></span>
                     </h3>
                     <p class="text-xs text-slate-500">Search like Google Maps or drop a pin directly on the interactive map</p>
                 </div>
@@ -143,8 +158,11 @@
             </div>
 
             <!-- 3. Form Input Fields (Auto-Populated from Selection or Manual) -->
-            <form action="{{ route('locations.store') }}" method="POST" class="space-y-3 text-xs">
+            <form :action="isEditing ? '/locations/' + form.id : '{{ route('locations.store') }}'" method="POST" class="space-y-3 text-xs">
                 @csrf
+                <template x-if="isEditing">
+                    <input type="hidden" name="_method" value="PUT">
+                </template>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Node Code *</label>
@@ -215,10 +233,12 @@
     function locationNodeManager() {
         return {
             addLocationModal: false,
+            isEditing: false,
             searchQuery: '',
             searchResults: [],
             isSearching: false,
             form: {
+                id: null,
                 code: '',
                 type: 'PORT',
                 name: '',
@@ -230,12 +250,45 @@
             },
             pickerMap: null,
             pickerMarker: null,
-            initPickerMap() {
+            openAddModal() {
+                this.isEditing = false;
+                this.searchQuery = '';
+                this.searchResults = [];
+                this.form = { id: null, code: '', type: 'PORT', name: '', city: '', country: '', latitude: '', longitude: '', address: '' };
+                this.addLocationModal = true;
+                this.initPickerMap();
+            },
+            openEditModal(loc) {
+                this.isEditing = true;
+                this.searchQuery = loc.name;
+                this.searchResults = [];
+                this.form = {
+                    id: loc.id,
+                    code: loc.code,
+                    type: loc.type,
+                    name: loc.name,
+                    city: loc.city,
+                    country: loc.country,
+                    latitude: loc.latitude,
+                    longitude: loc.longitude,
+                    address: loc.address || ''
+                };
+                this.addLocationModal = true;
+                this.initPickerMap(() => {
+                    if (loc.latitude && loc.longitude) {
+                        this.updatePin(loc.latitude, loc.longitude, true);
+                    }
+                });
+            },
+            initPickerMap(onReady = null) {
                 this.$nextTick(() => {
                     const container = document.getElementById('locationPickerMap');
                     if (!container) return;
                     if (this.pickerMap) {
-                        setTimeout(() => this.pickerMap.invalidateSize(), 200);
+                        setTimeout(() => {
+                            this.pickerMap.invalidateSize();
+                            if (onReady) onReady();
+                        }, 200);
                         return;
                     }
                     this.pickerMap = L.map('locationPickerMap', {
@@ -260,7 +313,10 @@
                         this.updatePin(e.latlng.lat, e.latlng.lng);
                     });
 
-                    setTimeout(() => this.pickerMap.invalidateSize(), 250);
+                    setTimeout(() => {
+                        this.pickerMap.invalidateSize();
+                        if (onReady) onReady();
+                    }, 250);
                 });
             },
             async doSearch() {

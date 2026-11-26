@@ -102,11 +102,22 @@ class ShipmentService
             $oldValues = $shipment->toArray();
 
             // Validate status change if requested
-            if (isset($data['current_status']) && $data['current_status'] !== $shipment->current_status) {
+            $statusChanged = isset($data['current_status']) && $data['current_status'] !== $shipment->current_status;
+            if ($statusChanged) {
                 $this->validateStatusTransition($shipment, $data['current_status']);
             }
 
             $shipment->fill($data);
+
+            if ($statusChanged) {
+                if ($shipment->current_status === Shipment::STATUS_IN_TRANSIT && !$shipment->actual_departure) {
+                    $shipment->actual_departure = now();
+                }
+                if ($shipment->current_status === Shipment::STATUS_DELIVERED && !$shipment->actual_arrival) {
+                    $shipment->actual_arrival = now();
+                    $shipment->current_location_id = $shipment->destination_id;
+                }
+            }
 
             // Re-evaluate delay if ETA or expected dates updated
             if (isset($data['estimated_arrival']) || isset($data['expected_arrival'])) {
@@ -114,6 +125,21 @@ class ShipmentService
             }
 
             $shipment->save();
+
+            if ($statusChanged) {
+                $location = ($shipment->current_status === Shipment::STATUS_DELIVERED) ? $shipment->destination : ($shipment->currentLocation ?? $shipment->origin);
+                $shipment->trackingEvents()->create([
+                    'event_type' => 'STATUS_UPDATE',
+                    'status' => $shipment->current_status,
+                    'location_id' => $location?->id,
+                    'location_name' => $location?->name ?? 'Operational Checkpoint',
+                    'latitude' => $location?->latitude,
+                    'longitude' => $location?->longitude,
+                    'description' => "Shipment status updated to {$shipment->current_status}.",
+                    'event_time' => now(),
+                    'created_by' => $actor?->id,
+                ]);
+            }
 
             AuditService::log('UPDATED', $shipment, $oldValues, $shipment->toArray(), $actor);
 

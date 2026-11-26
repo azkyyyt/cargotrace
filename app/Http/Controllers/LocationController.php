@@ -67,4 +67,56 @@ class LocationController extends Controller
 
         return redirect()->route('locations.index')->with('success', "Location {$location->name} ({$location->code}) added successfully with verified coordinates.");
     }
+
+    public function update(Request $request, int $id)
+    {
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
+            abort(403);
+        }
+
+        $location = Location::findOrFail($id);
+        $old = $location->toArray();
+
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:20', "unique:locations,code,{$location->id}"],
+            'name' => ['required', 'string', 'max:100'],
+            'city' => ['required', 'string', 'max:100'],
+            'country' => ['required', 'string', 'max:100'],
+            'type' => ['required', 'in:PORT,AIRPORT,WAREHOUSE,CUSTOMS,HUB'],
+            'latitude' => ['nullable', 'numeric'],
+            'longitude' => ['nullable', 'numeric'],
+            'address' => ['nullable', 'string'],
+        ]);
+
+        if (empty($validated['latitude']) || empty($validated['longitude'])) {
+            $geo = $this->externalApiService->geocode("{$validated['name']}, {$validated['city']}, {$validated['country']}");
+            $validated['latitude'] = $geo['latitude'];
+            $validated['longitude'] = $geo['longitude'];
+        }
+
+        $location->update($validated);
+        AuditService::log('LOCATION_UPDATED', $location, $old, $location->toArray(), $user);
+
+        return redirect()->route('locations.index')->with('success', "Location {$location->name} updated successfully.");
+    }
+
+    public function destroy(int $id)
+    {
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
+            abort(403);
+        }
+
+        $location = Location::withCount(['outboundShipments', 'inboundShipments'])->findOrFail($id);
+        if (($location->outbound_shipments_count + $location->inbound_shipments_count) > 0) {
+            return back()->with('error', "Cannot delete {$location->name} because active or historical shipments reference this hub.");
+        }
+
+        $old = $location->toArray();
+        $location->delete();
+        AuditService::log('LOCATION_DELETED', $location, $old, null, $user);
+
+        return redirect()->route('locations.index')->with('success', 'Location deleted.');
+    }
 }

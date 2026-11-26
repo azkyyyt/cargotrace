@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Setting;
 use App\Models\Shipment;
 use Carbon\Carbon;
 
@@ -33,9 +34,9 @@ class EtaService
 
         if ($isDelayed) {
             $status = 'DELAYED';
-            $lowThreshold = (int) config('services.cargo.delay_threshold_low', env('DELAY_THRESHOLD_LOW_HOURS', 6));
-            $medThreshold = (int) config('services.cargo.delay_threshold_medium', env('DELAY_THRESHOLD_MEDIUM_HOURS', 24));
-            $groupThreshold = (int) config('services.cargo.group_threshold', env('GROUP_DELAY_THRESHOLD_HOURS', 18));
+            $lowThreshold = (int) Setting::getValue('delay_threshold_low_hours', config('services.cargo.delay_threshold_low', 6));
+            $medThreshold = (int) Setting::getValue('delay_threshold_medium_hours', config('services.cargo.delay_threshold_medium', 24));
+            $groupThreshold = (int) Setting::getValue('group_delay_threshold_hours', config('services.cargo.group_threshold', 18));
 
             if ($delayHours <= $lowThreshold) {
                 $severity = 'LOW';
@@ -45,7 +46,7 @@ class EtaService
                 $severity = 'HIGH';
             }
 
-            $effectiveReason = $reason ?: "Estimated arrival ({$estimated->format('Y-m-d H:i')}) exceeds expected arrival ({$expected->format('Y-m-d H:i')}) by {$delayHours} hours [Threshold ref: {$groupThreshold}h].";
+            $effectiveReason = $reason ?: "Estimated arrival ({$estimated->format('Y-m-d H:i')}) exceeds expected arrival ({$expected->format('Y-m-d H:i')}) by {$delayHours}h [Rules: Low <= {$lowThreshold}h, Med <= {$medThreshold}h | Group Threshold: {$groupThreshold}h].";
         } else {
             $effectiveReason = $reason ?: 'Shipment running on schedule.';
         }

@@ -31,32 +31,11 @@
                 <span class="px-3 py-1 rounded-full text-xs font-extrabold border {{ $badgeClass }}">
                     {{ $shipment->current_status }}
                 </span>
-
-                <!-- Payment Status Badge -->
-                @if($shipment->payment_status === 'PAID')
-                    <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-300 flex items-center space-x-1.5 shadow-sm">
-                        <svg class="w-3.5 h-3.5 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
-                        <span>PAID ({{ str_replace('_', ' ', $shipment->payment_method ?? 'VERIFIED') }})</span>
-                    </span>
-                @else
-                    <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 flex items-center space-x-1.5 animate-pulse shadow-sm">
-                        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                        <span>AWAITING PAYMENT</span>
-                    </span>
-                @endif
             </div>
         </div>
 
-        <!-- Action Buttons -->
+        <!-- Action Buttons (Logistics Operator Only per Slide 05) -->
         <div class="flex flex-wrap items-center gap-2">
-            <!-- Simulated Payment Gateway Trigger (Only Ordering Customer) -->
-            @if(Auth::user()->isCustomer() && (int)$shipment->customer_id === (int)Auth::id() && $shipment->payment_status !== 'PAID')
-                <button type="button" @click="simulatePaymentModal = true" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition flex items-center space-x-1.5">
-                    <svg class="w-4 h-4 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                    <span>⚡ Settle Payment (Gateway Sandbox)</span>
-                </button>
-            @endif
-
             @if(Auth::user()->canManageShipments() && !$shipment->isTerminal())
                 <button type="button" @click="addEventModal = true" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm transition flex items-center space-x-1.5">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
@@ -143,28 +122,30 @@
             <div class="p-3 rounded-lg border {{ $shipment->delay_status === 'DELAYED' ? 'bg-rose-50 border-rose-200 text-rose-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900' }} text-xs">
                 <div class="font-bold flex items-center justify-between">
                     <span>Variance: +{{ $shipment->delay_duration_hours }} Hours</span>
-                    <span class="text-[10px] opacity-75 font-normal">Buffer Threshold: {{ env('GROUP_DELAY_THRESHOLD_HOURS', 18) }}h</span>
+                    <span class="text-[10px] opacity-75 font-normal">Buffer Threshold: {{ $groupThreshold }}h</span>
                 </div>
                 <p class="text-[11px] mt-1">{{ $shipment->delay_reason ?: 'Vessel is navigating within nominal nautical margins along maritime trade corridors.' }}</p>
             </div>
         </div>
 
-        <!-- Live Oceanic Weather & Delay Check Integration (Open-Meteo) -->
+        <!-- Live Oceanic Weather Integration (Open-Meteo) -->
         <div class="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>
                     <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Live Contextual Oceanic Weather (External API)</h3>
-                    <p class="text-[11px] text-slate-500">Real-time Open-Meteo environmental monitoring along maritime lane</p>
+                    <p class="text-[11px] text-slate-500">Real-time Open-Meteo environmental observation along origin &amp; destination ports</p>
                 </div>
                 
-                <!-- Weather Impact Calculation Button -->
+                @if(Auth::user()->canManageShipments() && !$shipment->isTerminal())
+                <!-- Operational Weather Rule Check Button (Operator Only) -->
                 <form action="{{ route('shipments.weatherCheck', $shipment->id) }}" method="POST">
                     @csrf
                     <button type="submit" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
                         <svg class="w-3.5 h-3.5 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                        <span>⚡ Calculate Live Weather Delay Impact</span>
+                        <span>Evaluate Weather Alert Rule</span>
                     </button>
                 </form>
+                @endif
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -214,8 +195,8 @@
             </div>
 
             <div class="bg-sky-50/60 p-2.5 rounded-lg border border-sky-100 flex items-start space-x-2 text-[11px] text-slate-600">
-                <span class="text-sky-600 font-bold">&bull; Deterministic Delay Formula:</span>
-                <span>Wind &gt; 35 km/h &rarr; <strong>+8h delay</strong> &bull; Wind &gt; 50 km/h &rarr; <strong>+16h delay</strong> &bull; Wind &gt; 75 km/h &rarr; <strong>+28h delay</strong> (Triggers automatic WEATHER_DELAY exception).</span>
+                <span class="text-sky-600 font-bold shrink-0">&bull; Operational Rule Note:</span>
+                <span>Contextual Open-Meteo observations are informational; deterministic operational threshold triggers (Wind &gt; 35 / 50 / 75 km/h) notify operators of adverse sea states and are not claimed as predictive delay forecasts.</span>
             </div>
         </div>
     </div>
@@ -370,8 +351,7 @@
                                     </td>
                                     <td class="py-3 px-3">{{ $item->quantity }} units</td>
                                     <td class="py-3 px-3 font-mono font-bold text-slate-900">
-                                        {{ number_format($item->weight / 1000, 1) }} MT
-                                        <span class="text-[10px] font-sans text-slate-400 block">({{ number_format($item->weight, 0) }} kg)</span>
+                                        {{ number_format($item->weight, 1) }} MT
                                     </td>
                                     <td class="py-3 px-3">
                                         <span class="bg-slate-100 px-2 py-0.5 rounded text-[10px] font-mono text-slate-700">
@@ -423,7 +403,7 @@
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Total Bulk Weight:</span>
-                        <span class="font-black text-slate-900">{{ number_format($shipment->weight / 1000, 1) }} Metric Tons</span>
+                        <span class="font-black text-slate-900">{{ number_format($shipment->weight, 1) }} Metric Tons</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Stowage Volume:</span>
@@ -449,31 +429,6 @@
                         <span class="text-slate-400">Actual Arrival:</span>
                         <span class="text-slate-800 font-mono">{{ $shipment->actual_arrival ? $shipment->actual_arrival->format('Y-m-d H:i') : 'En route' }}</span>
                     </div>
-                </div>
-
-                <!-- Financial Escrow & Freight Cost Summary -->
-                <div class="mt-4 pt-3 border-t border-slate-100 space-y-2 bg-slate-50 p-3 rounded-lg">
-                    <div class="flex justify-between items-center">
-                        <span class="text-slate-500 font-semibold">Freight Charge:</span>
-                        <span class="text-sm font-black text-slate-900 font-mono">${{ number_format($shipment->freight_charge_usd ?? 0, 2) }} USD</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-slate-500">Payment Status:</span>
-                        <span class="font-bold text-xs {{ $shipment->payment_status === 'PAID' ? 'text-emerald-700' : 'text-amber-700' }}">
-                            {{ $shipment->payment_status }}
-                        </span>
-                    </div>
-                    @if($shipment->payment_reference)
-                        <div class="flex justify-between items-center text-[10px]">
-                            <span class="text-slate-400">Payment Ref:</span>
-                            <span class="font-mono text-slate-700 font-bold">{{ $shipment->payment_reference }}</span>
-                        </div>
-                    @endif
-                    @if(Auth::user()->isCustomer() && (int)$shipment->customer_id === (int)Auth::id() && $shipment->payment_status !== 'PAID')
-                        <button type="button" @click="simulatePaymentModal = true" class="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 px-3 rounded text-center transition">
-                            Pay Now via Sandbox Gateway &rarr;
-                        </button>
-                    @endif
                 </div>
 
                 @if($shipment->notes)
@@ -532,148 +487,6 @@
                     @endforelse
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- MODAL 1: Real-Time Payment Gateway Simulation -->
-    <div x-cloak x-show="simulatePaymentModal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200" @click.away="simulatePaymentModal = false">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-                <div>
-                    <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-                        <span>CargoTrace Payment Gateway Sandbox</span>
-                    </h3>
-                    <p class="text-xs text-slate-500">Real-time instant freight settlement simulation for {{ $shipment->shipment_number }}</p>
-                </div>
-                <button type="button" @click="simulatePaymentModal = false" class="text-slate-400 hover:text-slate-600">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-
-            <!-- Amount Banner -->
-            <div class="bg-gradient-to-r from-slate-900 to-sky-950 text-white p-4 rounded-xl mb-4">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <span class="text-[10px] uppercase font-bold text-sky-300 block">Total Freight Escrow Amount</span>
-                        <div class="text-2xl font-black font-mono tracking-tight text-white">
-                            ${{ number_format($shipment->freight_charge_usd ?? 45000, 2) }} <span class="text-xs font-normal text-sky-200">USD</span>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-[10px] uppercase font-bold text-slate-400 block">IDR Equivalent</span>
-                        <div class="text-xs font-mono font-bold text-slate-200">
-                            Rp {{ number_format(($shipment->freight_charge_usd ?? 45000) * 16250, 0, ',', '.') }}
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-2 text-[11px] text-sky-200 border-t border-sky-800/60 pt-2 flex items-center justify-between">
-                    <span>Cargo: <strong>{{ $shipment->cargo_type }}</strong> ({{ number_format($shipment->weight / 1000, 1) }} MT)</span>
-                    <span>Carrier: <strong>{{ $shipment->carrier ? $shipment->carrier->name : 'Ocean Carrier' }}</strong></span>
-                </div>
-            </div>
-
-            <!-- Payment Method Tabs -->
-            <div class="grid grid-cols-3 gap-2 mb-4 text-xs font-bold">
-                <button type="button" @click="paymentMethod = 'QRIS_REALTIME'" :class="paymentMethod === 'QRIS_REALTIME' ? 'bg-sky-600 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'" class="py-2 px-2 rounded-lg text-center transition">
-                    📱 QRIS Instant
-                </button>
-                <button type="button" @click="paymentMethod = 'VIRTUAL_ACCOUNT'" :class="paymentMethod === 'VIRTUAL_ACCOUNT' ? 'bg-sky-600 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'" class="py-2 px-2 rounded-lg text-center transition">
-                    🏦 Virtual Account
-                </button>
-                <button type="button" @click="paymentMethod = 'LETTER_OF_CREDIT'" :class="paymentMethod === 'LETTER_OF_CREDIT' ? 'bg-sky-600 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'" class="py-2 px-2 rounded-lg text-center transition">
-                    📄 Letter of Credit
-                </button>
-            </div>
-
-            <form action="{{ route('shipments.simulatePayment', $shipment->id) }}" method="POST">
-                @csrf
-                <input type="hidden" name="payment_method" :value="paymentMethod">
-
-                <!-- TAB 1: QRIS Interface -->
-                <div x-show="paymentMethod === 'QRIS_REALTIME'" class="space-y-3">
-                    <div class="border-2 border-slate-200 rounded-xl p-4 text-center bg-slate-50/50">
-                        <div class="flex items-center justify-between border-b border-slate-200 pb-2 mb-3">
-                            <span class="text-xs font-black tracking-wider text-rose-700">QRIS STANDAR PEMBAYARAN NASIONAL</span>
-                            <span class="text-[10px] font-mono text-slate-500" x-text="'Expires in: ' + qrisTimer"></span>
-                        </div>
-                        
-                        <!-- Realistic QR Mockup -->
-                        <div class="inline-block p-3 bg-white border border-slate-300 rounded-lg shadow-sm">
-                            <div class="w-40 h-40 bg-slate-900 rounded flex flex-col items-center justify-center text-white p-2 relative overflow-hidden">
-                                <div class="absolute inset-0 opacity-15 flex flex-wrap gap-1 p-1">
-                                    <template x-for="i in 100" :key="i">
-                                        <div class="w-3 h-3 bg-white"></div>
-                                    </template>
-                                </div>
-                                <div class="relative z-10 text-center">
-                                    <div class="text-2xl font-black text-amber-400">🌾</div>
-                                    <div class="text-[9px] font-bold mt-1 text-slate-200">CARGOTRACE ESCROW</div>
-                                    <div class="text-[8px] font-mono text-sky-300 mt-0.5">SCAN REAL-TIME</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-3 text-xs text-slate-700">
-                            Merchant: <strong>PT CARGOTRACE MARITIME LOGISTICS</strong><br>
-                            <span class="text-[11px] text-slate-500">Scan with BCA, Mandiri Livin, GoPay, OVO, Dana or any QRIS mobile banking</span>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md transition flex items-center justify-center space-x-2">
-                        <svg class="w-4 h-4 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        <span>Simulate Instant QRIS Payment Success</span>
-                    </button>
-                </div>
-
-                <!-- TAB 2: Virtual Account Interface -->
-                <div x-show="paymentMethod === 'VIRTUAL_ACCOUNT'" class="space-y-3">
-                    <div class="space-y-2">
-                        <label class="block text-xs font-bold text-slate-700">Select Bank</label>
-                        <div class="grid grid-cols-4 gap-2 text-xs">
-                            <button type="button" @click="selectedBank = 'BCA'" :class="selectedBank === 'BCA' ? 'border-sky-600 bg-sky-50 text-sky-800 font-bold' : 'border-slate-200 text-slate-600'" class="py-2 border rounded-lg text-center">BCA</button>
-                            <button type="button" @click="selectedBank = 'Mandiri'" :class="selectedBank === 'Mandiri' ? 'border-sky-600 bg-sky-50 text-sky-800 font-bold' : 'border-slate-200 text-slate-600'" class="py-2 border rounded-lg text-center">Mandiri</button>
-                            <button type="button" @click="selectedBank = 'BNI'" :class="selectedBank === 'BNI' ? 'border-sky-600 bg-sky-50 text-sky-800 font-bold' : 'border-slate-200 text-slate-600'" class="py-2 border rounded-lg text-center">BNI</button>
-                            <button type="button" @click="selectedBank = 'BRI'" :class="selectedBank === 'BRI' ? 'border-sky-600 bg-sky-50 text-sky-800 font-bold' : 'border-slate-200 text-slate-600'" class="py-2 border rounded-lg text-center">BRI</button>
-                        </div>
-                    </div>
-
-                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
-                        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block" x-text="selectedBank + ' Virtual Account Number'"></span>
-                        <div class="flex items-center justify-between">
-                            <span class="font-mono text-base font-extrabold text-slate-900 tracking-wider">8809 1029 4432 0981</span>
-                            <span class="text-[10px] bg-sky-100 text-sky-800 px-2 py-0.5 rounded font-bold">Copy</span>
-                        </div>
-                        <p class="text-[11px] text-slate-500 pt-1">Automated validation via webhook. Payment will be acknowledged within seconds.</p>
-                    </div>
-
-                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md transition flex items-center justify-center space-x-2">
-                        <svg class="w-4 h-4 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        <span>Simulate VA Payment Acknowledged</span>
-                    </button>
-                </div>
-
-                <!-- TAB 3: Letter of Credit (L/C) Interface -->
-                <div x-show="paymentMethod === 'LETTER_OF_CREDIT'" class="space-y-3">
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
-                        <div class="flex items-center justify-between border-b border-slate-200 pb-2">
-                            <span class="font-bold text-slate-800">Swift MT700 Irrevocable Documentary Credit</span>
-                            <span class="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-mono font-bold">L/C AT SIGHT</span>
-                        </div>
-                        <div class="space-y-1 text-slate-600">
-                            <div>Issuing Bank: <strong>Citibank N.A. Jakarta / Standard Chartered</strong></div>
-                            <div>Beneficiary: <strong>CargoTrace Global Grain Logistics Carrier Line</strong></div>
-                            <div>Advising Reference: <span class="font-mono font-bold text-slate-900">LC-2026-CT-990812</span></div>
-                            <div class="text-[11px] text-slate-500 pt-1">Standard banking collateral for international commodity grain movements (wheat, corn, soybeans, rice).</div>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md transition flex items-center justify-center space-x-2">
-                        <svg class="w-4 h-4 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        <span>Verify &amp; Confirm Documentary Credit (L/C)</span>
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 
@@ -848,11 +661,7 @@
             addEventModal: false,
             raiseExceptionModal: false,
             transitionModal: false,
-            simulatePaymentModal: false,
-            paymentMethod: 'QRIS_REALTIME',
             selectedTargetStatus: '',
-            selectedBank: 'BCA',
-            qrisTimer: '14:59',
             cpSearchQuery: '',
             cpResults: [],
             cpSearching: false,
@@ -881,17 +690,6 @@
                 this.cpLat = Number(item.latitude).toFixed(6);
                 this.cpLng = Number(item.longitude).toFixed(6);
                 this.cpResults = [];
-            },
-            init() {
-                let sec = 899;
-                setInterval(() => {
-                    if (sec > 0) {
-                        sec--;
-                        const m = Math.floor(sec / 60).toString().padStart(2, '0');
-                        const s = (sec % 60).toString().padStart(2, '0');
-                        this.qrisTimer = `${m}:${s}`;
-                    }
-                }, 1000);
             }
         };
     }

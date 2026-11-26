@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Carrier;
 use App\Models\Location;
+use App\Models\Setting;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Services\ExternalApiService;
@@ -195,6 +196,7 @@ class ShipmentController extends Controller
 
         $carriers = Carrier::where('is_active', true)->get();
         $locations = Location::all();
+        $groupThreshold = (int) Setting::getValue('group_delay_threshold_hours', config('services.cargo.group_threshold', 18));
 
         return view('shipments.show', compact(
             'shipment',
@@ -204,7 +206,8 @@ class ShipmentController extends Controller
             'corridorPath',
             'vesselInfo',
             'carriers',
-            'locations'
+            'locations',
+            'groupThreshold'
         ));
     }
 
@@ -212,12 +215,12 @@ class ShipmentController extends Controller
     {
         $user = Auth::user();
 
-        // Strict role boundary: Only Customer role can place orders / book grain consignments
-        if (!$user->isCustomer()) {
-            abort(403, 'Forbidden. Hanya akun Customer (Eksportir/Importir) yang berhak melakukan pemesanan kargo gandum. Admin dan Operator bertugas mengelola sistem dan operasional logistik.');
+        // Strictly per Slide 05: Only Logistics Operator creates/updates operational shipments
+        if (!$user->canManageShipments()) {
+            abort(403, 'Forbidden. Only Logistics Operators can create operational shipments.');
         }
 
-        $customers = collect([$user]);
+        $customers = User::where('role', 'customer')->get();
         $carriers = Carrier::where('is_active', true)->get();
         $locations = Location::all();
 
@@ -228,13 +231,14 @@ class ShipmentController extends Controller
     {
         $user = Auth::user();
 
-        // Strict role boundary: Only Customer role can place orders / book grain consignments
-        if (!$user->isCustomer()) {
-            abort(403, 'Forbidden. Hanya akun Customer yang berhak melakukan pemesanan kargo gandum.');
+        // Strictly per Slide 05: Only Logistics Operator creates operational shipments
+        if (!$user->canManageShipments()) {
+            abort(403, 'Forbidden. Only Logistics Operators can create operational shipments.');
         }
 
-        $rules = [
+        $validated = $request->validate([
             'shipment_number' => ['nullable', 'string', 'unique:shipments,shipment_number'],
+            'customer_id' => ['required', 'exists:users,id'],
             'carrier_id' => ['required', 'exists:carriers,id'],
             'origin_id' => ['required', 'exists:locations,id'],
             'destination_id' => ['required', 'exists:locations,id', 'different:origin_id'],
@@ -247,10 +251,7 @@ class ShipmentController extends Controller
             'notes' => ['nullable', 'string'],
             'item_description' => ['nullable', 'string'],
             'item_quantity' => ['nullable', 'integer', 'min:1'],
-        ];
-
-        $validated = $request->validate($rules);
-        $validated['customer_id'] = $user->id; // Strictly locked to authenticated customer
+        ]);
 
         if (!empty($validated['item_description'])) {
             $validated['items'] = [
@@ -272,7 +273,7 @@ class ShipmentController extends Controller
     {
         $user = Auth::user();
         if (!$user->canManageShipments()) {
-            abort(403, 'Forbidden. Only administrators and operators can edit shipments.');
+            abort(403, 'Forbidden. Only Logistics Operators can edit shipments.');
         }
 
         $shipment = Shipment::findOrFail($id);
@@ -287,7 +288,7 @@ class ShipmentController extends Controller
     {
         $user = Auth::user();
         if (!$user->canManageShipments()) {
-            abort(403, 'Forbidden.');
+            abort(403, 'Forbidden. Only Logistics Operators can update shipments.');
         }
 
         $shipment = Shipment::findOrFail($id);
@@ -314,7 +315,7 @@ class ShipmentController extends Controller
     {
         $user = Auth::user();
         if (!$user->canManageShipments()) {
-            abort(403, 'Forbidden.');
+            abort(403, 'Forbidden. Only Logistics Operators can transition shipment status.');
         }
 
         $shipment = Shipment::findOrFail($id);
@@ -330,69 +331,23 @@ class ShipmentController extends Controller
     }
 
     /**
-     * Customer Grain Cargo Booking (Wheat, Corn, Soybeans, Rice)
-     */
-    public function bookGrain(Request $request)
-    {
-        $user = Auth::user();
-
-        // Strict role boundary: Only Customer role can place orders / book grain consignments
-        if (!$user->isCustomer()) {
-            abort(403, 'Forbidden. Pemesanan komoditas gandum hanya dapat dilakukan oleh akun Customer.');
-        }
-
-        $validated = $request->validate([
-            'cargo_type' => ['required', 'in:Wheat,Corn,Soybeans,Rice'],
-            'carrier_id' => ['required', 'exists:carriers,id'],
-            'origin_id' => ['required', 'exists:locations,id'],
-            'destination_id' => ['required', 'exists:locations,id', 'different:origin_id'],
-            'weight' => ['required', 'numeric', 'min:100'], // Tonase
-            'grade_specification' => ['nullable', 'string', 'max:255'],
-            'payment_method' => ['required', 'in:QRIS_REALTIME,VIRTUAL_ACCOUNT,LETTER_OF_CREDIT,CREDIT_CARD'],
-            'notes' => ['nullable', 'string', 'max:500'],
-        ]);
-
-        $shipment = $this->shipmentService->createGrainBooking($validated, $user);
-
-        return redirect()->route('shipments.show', $shipment->id)->with('success', "Grain consignment {$shipment->shipment_number} ordered! Proceed with simulated payment.");
-    }
-
-    /**
-     * Real-Time Simulated Payment Gateway Processor
-     */
-    public function simulatePayment(Request $request, int $id)
-    {
-        $user = Auth::user();
-        $shipment = Shipment::findOrFail($id);
-
-        // Strict role boundary: Only the ordering Customer can settle payment
-        if (!$user->isCustomer() || (int) $shipment->customer_id !== (int) $user->id) {
-            abort(403, 'Unauthorized. Hanya Customer pemilik konsinyasi yang berhak melakukan penyelesaian pembayaran.');
-        }
-
-        $validated = $request->validate([
-            'payment_method' => ['required', 'string', 'in:QRIS_REALTIME,VIRTUAL_ACCOUNT,LETTER_OF_CREDIT,CREDIT_CARD'],
-        ]);
-
-        $this->shipmentService->processSimulatedPayment($shipment, $validated['payment_method'], $user);
-
-        return redirect()->route('shipments.show', $shipment->id)->with('success', "Real-Time Payment Verified! Shipment {$shipment->shipment_number} is now BOOKED and allocated to the ocean corridor.");
-    }
-
-    /**
-     * Live Weather Evaluation Trigger:
-     * Reads current oceanic conditions and automatically computes delay hours + flags WEATHER_DELAY if adverse.
+     * Live Weather Rule Check (Slide 09):
+     * Evaluates current contextual weather conditions using Open-Meteo API
+     * and applies deterministic delay alert rules if severe weather is active.
      */
     public function checkWeatherImpact(int $id)
     {
         $user = Auth::user();
-        $shipment = Shipment::with(['origin', 'destination', 'trackingEvents'])->findOrFail($id);
-
-        if ($user->isCustomer() && (int) $shipment->customer_id !== (int) $user->id) {
-            abort(403, 'Unauthorized.');
+        if (!$user->canManageShipments()) {
+            abort(403, 'Forbidden. Only Logistics Operators can evaluate operational weather alerts on shipments.');
         }
 
-        // Get latest coordinates or origin coordinates
+        $shipment = Shipment::with(['origin', 'destination', 'trackingEvents'])->findOrFail($id);
+
+        if ($shipment->isTerminal()) {
+            return redirect()->route('shipments.show', $shipment->id)->with('info', 'Weather alert check skipped for completed/cancelled shipment.');
+        }
+
         $latestEvent = $shipment->trackingEvents->whereNotNull('latitude')->whereNotNull('longitude')->last();
         $lat = $latestEvent ? (float) $latestEvent->latitude : (float) ($shipment->origin?->latitude ?? 0);
         $lon = $latestEvent ? (float) $latestEvent->longitude : (float) ($shipment->origin?->longitude ?? 0);
@@ -405,16 +360,15 @@ class ShipmentController extends Controller
                 'estimated_arrival' => $newEstimatedArrival,
             ], $user);
 
-            // Create exception if not already open
             $hasWeatherEx = $shipment->exceptions()->where('exception_type', 'WEATHER_DELAY')->where('status', '!=', 'RESOLVED')->exists();
             if (!$hasWeatherEx) {
                 $te = $shipment->trackingEvents()->create([
                     'event_type' => 'EXCEPTION_FLAG',
                     'status' => $shipment->current_status,
-                    'location_name' => "Oceanic Zone [{$lat}, {$lon}]",
+                    'location_name' => "Route Coordinate [{$lat}, {$lon}]",
                     'latitude' => $lat,
                     'longitude' => $lon,
-                    'description' => "[AUTOMATED LIVE WEATHER] {$weatherImpact['reason']}",
+                    'description' => "[WEATHER ALERT RULE] {$weatherImpact['reason']}",
                     'event_time' => now(),
                     'created_by' => $user->id,
                 ]);
@@ -429,10 +383,10 @@ class ShipmentController extends Controller
                 ]);
             }
 
-            return redirect()->route('shipments.show', $shipment->id)->with('warning', "Live Weather Alert: Wind {$weatherImpact['weather']['windspeed']} km/h. Automated Delay of +{$weatherImpact['delay_hours']}h applied to ETA.");
+            return redirect()->route('shipments.show', $shipment->id)->with('warning', "Weather Rule Triggered: Wind {$weatherImpact['weather']['windspeed']} km/h. Deterministic delay of +{$weatherImpact['delay_hours']}h logged.");
         }
 
-        return redirect()->route('shipments.show', $shipment->id)->with('info', "Live Weather Check: Wind {$weatherImpact['weather']['windspeed']} km/h. Conditions favorable for bulk grain transit (0h delay).");
+        return redirect()->route('shipments.show', $shipment->id)->with('info', "Weather Observation: Wind {$weatherImpact['weather']['windspeed']} km/h ({$weatherImpact['weather']['condition']}). Conditions normal (0h rule delay).");
     }
 
     public function destroy(int $id)

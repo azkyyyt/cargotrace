@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Carrier;
 use App\Models\Location;
 use App\Models\Notification;
+use App\Models\Setting;
 use App\Models\Shipment;
 use App\Models\ShipmentException;
 use App\Models\ShipmentItem;
@@ -216,13 +217,36 @@ class DatabaseSeeder extends Seeder
             $locationModels[$locData['code']] = Location::updateOrCreate(['code' => $locData['code']], $locData);
         }
 
-        // 4. Create Shipments with realistic grain scenarios (Wheat, Corn, Soybeans, Rice)
+        // 3b. Seed Configurable System Settings (Slide 05 & 08)
+        Setting::firstOrCreate(
+            ['key' => 'group_delay_threshold_hours'],
+            ['value' => (string) env('GROUP_DELAY_THRESHOLD_HOURS', 18), 'label' => 'Group Delay Threshold (Hours)', 'description' => 'Active scenario delay threshold per group.']
+        );
+        Setting::firstOrCreate(
+            ['key' => 'delay_threshold_low_hours'],
+            ['value' => (string) env('DELAY_THRESHOLD_LOW_HOURS', 6), 'label' => 'Low Severity Delay Upper Limit (Hours)', 'description' => 'Delays from 1 to this value are classified as LOW severity.']
+        );
+        Setting::firstOrCreate(
+            ['key' => 'delay_threshold_medium_hours'],
+            ['value' => (string) env('DELAY_THRESHOLD_MEDIUM_HOURS', 24), 'label' => 'Medium Severity Delay Upper Limit (Hours)', 'description' => 'Delays above Low limit up to this value are classified as MEDIUM; higher values are HIGH.']
+        );
+        Setting::firstOrCreate(
+            ['key' => 'active_group_scenario'],
+            ['value' => 'Group B (Asia -> North America / International | 18h Threshold)', 'label' => 'Active Group Scenario', 'description' => 'Current demonstration group configuration.']
+        );
+
+        // Ensure idempotency when seeder runs multiple times on container restart
+        if (Shipment::withTrashed()->count() > 0) {
+            return;
+        }
+
+        // 4. Create Shipments with realistic scenarios (Corn, Wheat, Soybeans, Rice)
         $now = Carbon::now();
 
-        // Scenario 1: Corn (Santos, Brazil -> Tanjung Priok, Indonesia) - Paid via Real-time QRIS & Underway with Live Weather!
+        // Scenario 1: Corn (Santos, Brazil -> Tanjung Priok, Indonesia) - +5h slight swell (LOW severity per Slide 08 rule: 0-6h LOW)
         $s1Departure = $now->copy()->subDays(8);
         $s1ExpectedArrival = $now->copy()->addDays(18);
-        $s1EstimatedArrival = $now->copy()->addDays(18)->addHours(8); // +8h slight sea swell
+        $s1EstimatedArrival = $now->copy()->addDays(18)->addHours(5); // +5h slight sea swell
 
         $s1 = Shipment::create([
             'shipment_number' => 'CT-2026-CRN01',
@@ -240,9 +264,9 @@ class DatabaseSeeder extends Seeder
             'estimated_arrival' => $s1EstimatedArrival,
             'current_status' => Shipment::STATUS_IN_TRANSIT,
             'delay_status' => 'DELAYED',
-            'delay_duration_hours' => 8,
+            'delay_duration_hours' => 5,
             'delay_severity' => 'LOW',
-            'delay_reason' => 'Moderate rough sea state off Cape of Good Hope (+8h speed reduction).',
+            'delay_reason' => 'Moderate sea swell off Cape of Good Hope (+5h speed adjustment).',
             'payment_status' => 'PAID',
             'payment_method' => 'QRIS_REALTIME',
             'payment_reference' => 'QRIS-2026-BRZ99120',

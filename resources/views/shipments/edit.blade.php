@@ -66,7 +66,7 @@
 
                 <!-- Weight -->
                 <div>
-                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">Weight (kg)</label>
+                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">Weight (MT)</label>
                     <input type="number" step="0.01" name="weight" value="{{ old('weight', $shipment->weight) }}" required class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none">
                 </div>
 

@@ -10,13 +10,13 @@
         <div>
             <h1 class="text-2xl font-black text-slate-900 tracking-tight">Operations Dashboard</h1>
             <p class="text-xs text-slate-500 mt-1">
-                Real-time shipment visibility &bull; Threshold reference: <span class="font-bold text-sky-700">{{ env('GROUP_DELAY_THRESHOLD_HOURS', 18) }}h</span>
+                Real-time shipment visibility &bull; Scenario: <span class="font-bold text-slate-700">{{ $activeScenario }}</span> &bull; Threshold: <span class="font-bold text-sky-700">{{ $groupThreshold }}h</span>
             </p>
         </div>
-        @if(Auth::user()->isCustomer())
-            <a href="{{ route('shipments.create') }}" class="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition">
-                <span>🌾</span>
-                <span>Order Grain Cargo</span>
+        @if(Auth::user()->canManageShipments())
+            <a href="{{ route('shipments.create') }}" class="inline-flex items-center space-x-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span>Create Shipment</span>
             </a>
         @endif
     </div>
@@ -103,7 +103,7 @@
     </div>
 
     <!-- Operational KPI Indicators Row (Slide 10 & 23) -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- On-time Delivery Rate -->
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
             <div class="flex items-center justify-between text-xs font-semibold text-slate-600 mb-2">
@@ -125,7 +125,19 @@
             <div class="w-full bg-slate-100 rounded-full h-2.5">
                 <div class="bg-rose-500 h-2.5 rounded-full" style="width: {{ $delayRate }}%"></div>
             </div>
-            <p class="text-[10px] text-slate-400 mt-2">Reflects shipments exceeding expected arrival</p>
+            <p class="text-[10px] text-slate-400 mt-2">Shipments exceeding expected arrival</p>
+        </div>
+
+        <!-- Exception Rate -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between text-xs font-semibold text-slate-600 mb-2">
+                <span>Exception Occurrence Rate</span>
+                <span class="text-indigo-600 font-bold">{{ $exceptionRate }}%</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2.5">
+                <div class="bg-indigo-500 h-2.5 rounded-full" style="width: {{ $exceptionRate }}%"></div>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-2">Avg Resolution: {{ $avgResolutionHours }}h ({{ $resolvedExceptionsCount }} resolved)</p>
         </div>
 
         <!-- Average Delay Duration -->
@@ -137,28 +149,37 @@
             <div class="w-full bg-slate-100 rounded-full h-2.5">
                 <div class="bg-amber-500 h-2.5 rounded-full" style="width: {{ min(100, ($avgDelayDuration / 48) * 100) }}%"></div>
             </div>
-            <p class="text-[10px] text-slate-400 mt-2">Configured Group Threshold: {{ env('GROUP_DELAY_THRESHOLD_HOURS', 18) }} Hours</p>
+            <p class="text-[10px] text-slate-400 mt-2">Configured Group Threshold: {{ $groupThreshold }} Hours</p>
         </div>
     </div>
 
-    <!-- Grain Commodities Quick Order Banner (Tahap 3 Innovation) -->
+    <!-- Active Trade Corridors Reference Banner -->
     <div class="bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 border border-slate-800 rounded-2xl p-5 text-white shadow-lg">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <div class="flex items-center space-x-2 text-amber-400 font-bold text-xs uppercase tracking-wider mb-1">
                     <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                    <span>International Grain Logistics &amp; Freight Escrow Simulator</span>
+                    <span>Maritime Freight Operations &amp; Lane Visibility</span>
                 </div>
-                <h2 class="text-lg font-black tracking-tight text-white">Global Dry Bulk Consignment Booking</h2>
+                <h2 class="text-lg font-black tracking-tight text-white">Active International Bulk Cargo Corridors</h2>
                 <p class="text-xs text-slate-300 mt-1 max-w-2xl">
-                    Order bulk shipments of <strong>Wheat, Corn, Soybeans, or Rice</strong> from major export loading silos (Brazil, Australia, USA, Thailand) to Indonesian discharge ports with real-time simulated payment gateway verification.
+                    Tracking end-to-end consignment lifecycles, deterministic ETA deviations, and disruption exceptions across synthetic multi-regional demonstration routes.
                 </p>
             </div>
             <div class="flex items-center gap-2">
-                <a href="{{ route('shipments.create') }}" class="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black px-4 py-2.5 rounded-xl shadow-md transition">
-                    <span>🌾</span>
-                    <span>Order Grain Cargo</span>
-                </a>
+                @if(Auth::user()->canManageShipments())
+                    <a href="{{ route('shipments.create') }}" class="inline-flex items-center space-x-2 bg-sky-500 hover:bg-sky-400 text-white text-xs font-black px-4 py-2.5 rounded-xl shadow-md transition">
+                        <span>+ Create Shipment</span>
+                    </a>
+                @elseif(Auth::user()->isAdmin())
+                    <a href="{{ route('settings.index') }}" class="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black px-4 py-2.5 rounded-xl shadow-md transition">
+                        <span>Configure Thresholds</span>
+                    </a>
+                @else
+                    <a href="{{ route('shipments.index') }}" class="inline-flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black px-4 py-2.5 rounded-xl shadow-md transition">
+                        <span>View My Shipments &rarr;</span>
+                    </a>
+                @endif
             </div>
         </div>
         <!-- 4 Core Commodities Badges -->

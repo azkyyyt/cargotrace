@@ -6,8 +6,11 @@
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=flat&logo=php)](https://www.php.net/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
 [![Leaflet.js](https://img.shields.io/badge/Leaflet.js-1.9.4-199900?style=flat&logo=leaflet)](https://leafletjs.com/)
-[![Tests](https://img.shields.io/badge/Tests-22%20Passed%20(75%20assertions)-success?style=flat)](tests)
+[![Tests](https://img.shields.io/badge/Tests-35%20Passed%20(138%20assertions)-success?style=flat)](tests)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Railway-0B0D0E?style=flat&logo=railway)](https://azkiaakbar.up.railway.app)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+> **Live Deployment:** **[https://azkiaakbar.up.railway.app](https://azkiaakbar.up.railway.app)**
 
 ---
 
@@ -27,7 +30,8 @@ CargoTrace is a full-featured shipment tracking and visibility platform built st
 - **Interactive Waypoint Mapping**: Integrated Leaflet.js with OpenStreetMap to render maritime/air corridors, intermediate transit hubs, and exception coordinates.
 - **Live External Service Integrations**: Real-time geocoding via OpenStreetMap Nominatim and atmospheric weather via Open-Meteo with network timeout resilience and graceful fallbacks.
 - **Full REST API Suite with Laravel Sanctum**: Token-based authentication, server-side authorization, JSON error contracts, and complete Postman collection.
-- **Rigorous Automated Testing**: 22 automated feature tests covering authentication, RBAC data isolation, state machine transitions, delay math, and REST endpoints.
+- **Rigorous Automated Testing**: 35 automated feature & unit tests covering authentication, strict RBAC isolation, user/threshold administration, state machine transitions, chronological tracking validation, delay math, and REST endpoints.
+- **Technical Documentation**: Full ERD and Data Dictionary provided in [`docs/DATA_DICTIONARY_AND_ERD.md`](./docs/DATA_DICTIONARY_AND_ERD.md).
 
 ---
 
@@ -76,15 +80,16 @@ All endpoints and controllers verify role permissions on the server:
 
 | Feature / Resource | Administrator | Logistics Operator | Customer |
 |---|:---:|:---:|:---:|
+| User & Role Management (CRUD) | :white_check_mark: | :x: | :x: |
 | System Configuration & Delay Thresholds | :white_check_mark: | :x: | :x: |
 | Carrier Line Management (CRUD) | :white_check_mark: | Read Only | Read Only |
-| Node & Hub Location Management | :white_check_mark: | Read Only | Read Only |
+| Node & Hub Location Management (CRUD + Geocoding) | :white_check_mark: | Read Only | Read Only |
 | View All Consignments & Analytics | :white_check_mark: | :white_check_mark: | Own Shipments Only |
-| Create & Edit Shipments | :white_check_mark: | :white_check_mark: | :x: |
-| Advance Status Lifecycle | :white_check_mark: | :white_check_mark: | :x: |
-| Record Tracking Checkpoints | :white_check_mark: | :white_check_mark: | :x: |
-| Flag & Resolve Exceptions | :white_check_mark: | :white_check_mark: | View Relevant Only |
-| Delete Consignment | :white_check_mark: | :x: | :x: |
+| Create & Edit Shipments | :x: | :white_check_mark: | :x: |
+| Advance Status Lifecycle | :x: | :white_check_mark: | :x: |
+| Record Tracking Checkpoints | :x: | :white_check_mark: | :x: |
+| Flag & Resolve Exceptions | :x: | :white_check_mark: | View Relevant Only |
+| Delete Erroneous Consignment | :white_check_mark: | :x: | :x: |
 | Inspect Security Audit Logs | :white_check_mark: | :x: | :x: |
 
 ---
@@ -125,7 +130,9 @@ $$\Delta t = \text{estimated\_arrival} - \text{expected\_arrival}$$
 - **Group B Scenario**: Asia &rarr; North America (`CT-2026-USA02`), 18h threshold, Primary Exception: Weather Delay.
 - **Group C Scenario**: Southeast Asia &rarr; Australia (`CT-2026-AUS03`), 24h threshold, Delivered on time.
 
-*The threshold parameter is configurable via `GROUP_DELAY_THRESHOLD_HOURS` in `.env`.*
+*Thresholds are dynamically configurable by Administrator via **Administration &rarr; Configuration** (`/settings`, persisted in the `settings` table) with `.env` defaults (`GROUP_DELAY_THRESHOLD_HOURS`).*
+
+See [`docs/DATA_DICTIONARY_AND_ERD.md`](./docs/DATA_DICTIONARY_AND_ERD.md) for the complete Data Dictionary, constraint explanations, and cardinality decisions.
 
 ---
 
@@ -236,6 +243,13 @@ erDiagram
         json new_values
         string ip_address
     }
+
+    settings {
+        bigint id PK
+        string key UK
+        string value
+        string label
+    }
 ```
 
 ---
@@ -243,9 +257,9 @@ erDiagram
 ## 7. Interactive Map & External API Integration
 
 - **Leaflet.js + OpenStreetMap**: Renders high-resolution interactive map tiles, origin/destination pins, historical tracking coordinates, and route polylines. Includes required copyright attributions.
-- **Geocoding API**: Uses OpenStreetMap Nominatim for automated coordinate discovery with caching.
-- **Weather API**: Queries live ambient temperature, wind velocity, and condition reports via Open-Meteo.
-- **Fault Tolerance**: Requests use a strict 4-second timeout limit. If external networks are offline or rate-limited, fallback data is applied to prevent application failure.
+- **Geocoding API**: Uses Photon / OpenStreetMap Nominatim (plus optional Google Maps key via `.env`) for automated coordinate discovery and address autocomplete.
+- **Weather API**: Queries live ambient temperature, wind velocity, and weather codes via Open-Meteo. Triggered weather alerts use deterministic operational rules and are explicitly **not claimed as predictive weather forecasts**.
+- **Fault Tolerance**: Requests use strict 4-second timeout limits. If external networks are offline or rate-limited, fallback data is applied to prevent application failure.
 
 ---
 
@@ -255,9 +269,9 @@ The seeders provide ready-to-test accounts for each role. Quick 1-click login bu
 
 | Role | Email Address | Password | Permissions & Scope |
 |---|---|---|---|
-| **Administrator** | `admin@cargotrace.test` | `password` | Full system control, carriers, locations, audit logs, all shipments |
-| **Logistics Operator** | `operator@cargotrace.test` | `password` | Create shipments, transition statuses, add checkpoints, resolve exceptions |
-| **Customer (Primary)** | `customer@cargotrace.test` | `password` | PT Global Tech Solusindo &bull; Own shipments, map, timeline, alerts |
+| **Administrator** | `admin@cargotrace.test` | `password` | User management, system threshold config, carriers, locations, audit logs, view all/delete shipments |
+| **Logistics Operator** | `operator@cargotrace.test` | `password` | Create & update shipments, transition statuses, add chronological checkpoints, manage exceptions |
+| **Customer (Primary)** | `customer@cargotrace.test` | `password` | PT Global Tech Solusindo &bull; Own shipments, ETA, map, timeline, notifications & relevant exceptions |
 | **Customer (Secondary)**| `pacific@cargotrace.test` | `password` | Pacific Agro Trading Pte Ltd &bull; Isolated consignments |
 
 ---
@@ -318,45 +332,20 @@ php artisan test
 ```
 
 ### Test Evidence:
-```
-   PASS  Tests\Unit\ExampleTest
-  ✓ that true is true
+```text
+   PASS  Tests\Unit\ExampleTest (1 test)
+   PASS  Tests\Feature\AdminManagementAndConfigTest (3 tests)
+   PASS  Tests\Feature\ApiEndpointsTest (5 tests)
+   PASS  Tests\Feature\AuthenticationTest (4 tests)
+   PASS  Tests\Feature\AuthorizationTest (8 tests)
+   PASS  Tests\Feature\EtaDelayCalculationTest (4 tests)
+   PASS  Tests\Feature\ExampleTest (2 tests)
+   PASS  Tests\Feature\NotificationFeedRealtimeTest (2 tests)
+   PASS  Tests\Feature\ShipmentLifecycleTest (3 tests)
+   PASS  Tests\Feature\TrackingChronologyValidationTest (3 tests)
 
-   PASS  Tests\Feature\ApiEndpointsTest
-  ✓ unauthenticated request is rejected with 401
-  ✓ authenticated user can retrieve paginated shipments
-  ✓ operator can record tracking event via api
-  ✓ operator can raise and resolve exception via api
-
-   PASS  Tests\Feature\AuthenticationTest
-  ✓ user can login with valid credentials
-  ✓ user cannot login with invalid password
-  ✓ guest cannot access dashboard and is redirected to login
-  ✓ api login returns sanctum token
-
-   PASS  Tests\Feature\AuthorizationTest
-  ✓ customer can view their own shipment
-  ✓ customer cannot view another customers shipment
-  ✓ customer cannot delete shipment
-  ✓ admin can delete shipment
-
-   PASS  Tests\Feature\EtaDelayCalculationTest
-  ✓ evaluates on time when eta matches or is earlier than expected
-  ✓ evaluates low severity delay under 6 hours
-  ✓ evaluates medium severity delay between 6 and 24 hours
-  ✓ evaluates high severity delay over 24 hours
-
-   PASS  Tests\Feature\ExampleTest
-  ✓ guest is redirected to login
-  ✓ authenticated user is redirected to dashboard
-
-   PASS  Tests\Feature\ShipmentLifecycleTest
-  ✓ valid shipment lifecycle progression
-  ✓ invalid status jump is strictly rejected
-  ✓ terminal delivered status cannot be reverted
-
-  Tests:    22 passed (75 assertions)
-  Duration: 3.61s
+  Tests:    35 passed (138 assertions)
+  Duration: 42.71s
 ```
 
 ---
@@ -376,23 +365,23 @@ The repository includes a ready-to-import Postman collection:
 
 #### Shipments:
 - `GET /api/shipments` &mdash; Paginated shipments list with filters (`status`, `carrier_id`, `delay_status`)
-- `POST /api/shipments` &mdash; Create new shipment (Operator / Admin)
+- `POST /api/shipments` &mdash; Create new operational shipment (Logistics Operator Only)
 - `GET /api/shipments/{id}` &mdash; Full shipment details with waypoints
-- `PUT/PATCH /api/shipments/{id}` &mdash; Update shipment attributes
-- `DELETE /api/shipments/{id}` &mdash; Soft delete shipment (Admin)
+- `PUT/PATCH /api/shipments/{id}` &mdash; Update shipment attributes (Logistics Operator Only)
+- `DELETE /api/shipments/{id}` &mdash; Soft delete shipment (Administrator Only)
 
 #### Tracking Timeline & Checkpoints:
 - `GET /api/shipments/{id}/tracking` &mdash; Chronological tracking timeline
-- `POST /api/shipments/{id}/tracking` &mdash; Record checkpoint event
+- `POST /api/shipments/{id}/tracking` &mdash; Record checkpoint event (Logistics Operator Only)
 
 #### Disruption Exceptions:
 - `GET /api/shipments/{id}/exceptions` &mdash; List shipment exceptions
-- `POST /api/shipments/{id}/exceptions` &mdash; Flag new exception
-- `PATCH /api/exceptions/{id}` &mdash; Update exception status to `INVESTIGATING` or `RESOLVED`
+- `POST /api/shipments/{id}/exceptions` &mdash; Flag new exception (Logistics Operator Only)
+- `PATCH /api/exceptions/{id}` &mdash; Update exception status to `INVESTIGATING` or `RESOLVED` (Logistics Operator Only)
 
 #### Master Data:
-- `GET /api/carriers` &mdash; Active carriers
-- `GET /api/locations` &mdash; Terminal hubs and seaports
+- `GET/POST /api/carriers` &mdash; Active carriers & registration (Admin POST)
+- `GET/POST /api/locations` &mdash; Terminal hubs/seaports & creation (Admin POST)
 
 ---
 

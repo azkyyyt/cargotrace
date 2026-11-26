@@ -50,7 +50,9 @@ class User extends Authenticatable
 
     public function canManageShipments(): bool
     {
-        return in_array($this->role, ['admin', 'operator'], true);
+        // Strictly per Slide 05: Logistics Operator creates/updates operational shipments, tracking & exceptions.
+        // Administrator manages users, system config, carriers, locations & audit logs (read-only on daily shipment flow + delete).
+        return $this->isOperator();
     }
 
     public function shipments()

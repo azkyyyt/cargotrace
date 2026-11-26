@@ -55,10 +55,12 @@ return Application::configure(basePath: dirname(__DIR__))
                     ], 404);
                 }
 
-                // Never leak stack trace for 500 errors in API
+                // Never leak internal error strings or stack traces for 500 errors in production API
                 return response()->json([
                     'success' => false,
-                    'message' => $e->getMessage() ?: 'An unexpected server error occurred.',
+                    'message' => config('app.debug')
+                        ? ($e->getMessage() ?: 'An unexpected server error occurred.')
+                        : 'An unexpected server error occurred.',
                 ], 500);
             }
         });

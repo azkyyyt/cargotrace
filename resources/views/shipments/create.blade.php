@@ -127,13 +127,17 @@
                 </div>
 
                 <div>
-                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">Commodity / Cargo Type *</label>
-                    <select name="cargo_type" x-model="cargoType" required class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none bg-white focus:ring-2 focus:ring-sky-500 font-bold text-slate-900">
-                        <option value="Corn">🌽 Corn (Jagung Pipil Curah)</option>
-                        <option value="Wheat">🌾 Wheat (Gandum Pangan Pokok)</option>
-                        <option value="Soybeans">🌱 Soybeans (Kedelai Pangan)</option>
-                        <option value="Rice">🍚 Rice (Beras Konsumsi)</option>
-                    </select>
+                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">Cargo Type *</label>
+                    <input type="text" name="cargo_type" x-model="cargoType" list="cargoSuggestions" required placeholder="e.g. Corn, Wheat, Soybeans, Electronics" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none bg-white focus:ring-2 focus:ring-sky-500 font-bold text-slate-900">
+                    <datalist id="cargoSuggestions">
+                        <option value="Corn">
+                        <option value="Wheat">
+                        <option value="Soybeans">
+                        <option value="Rice">
+                        <option value="Electronic Parts">
+                        <option value="Medical Equipment">
+                        <option value="Industrial Machinery">
+                    </datalist>
                 </div>
             </div>
 
@@ -165,15 +169,15 @@
             <!-- Weight & Volume -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">Bulk Weight (kg) *</label>
+                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">Cargo Weight (MT) *</label>
                     <div class="relative">
-                        <input type="number" step="100" name="weight" x-model.number="weightVal" required class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none font-mono font-bold focus:ring-2 focus:ring-sky-500">
-                        <span class="absolute right-3 top-2 text-slate-400 font-mono text-[11px]" x-text="'= ' + (weightVal / 1000).toFixed(1) + ' MT'"></span>
+                        <input type="number" step="0.1" name="weight" x-model.number="weightVal" required class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none font-mono font-bold focus:ring-2 focus:ring-sky-500">
+                        <span class="absolute right-3 top-2 text-slate-400 font-mono text-[11px]" x-text="Number(weightVal).toLocaleString() + ' MT'"></span>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">Stowage Volume (CBM) *</label>
+                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">Volume (CBM) *</label>
                     <input type="number" step="0.1" name="volume" x-model.number="volumeVal" required class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none font-mono font-bold focus:ring-2 focus:ring-sky-500">
                 </div>
             </div>
@@ -206,19 +210,7 @@
             <!-- Special Handling Instructions / Notes -->
             <div>
                 <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">Stowage &amp; Handling Instructions</label>
-                <textarea name="notes" rows="2" placeholder="e.g. Cargo fumigated under gas; keep hatches battened during transoceanic transit..." class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-sky-500"></textarea>
-            </div>
-
-            <!-- Freight Summary Banner -->
-            <div class="bg-sky-50 border border-sky-200 rounded-xl p-4 flex items-center justify-between">
-                <div>
-                    <p class="text-[11px] font-bold text-sky-800 uppercase tracking-wider">Estimated Freight Cost (Reference)</p>
-                    <p class="text-xl font-black text-slate-900 mt-0.5" x-text="totalFreight"></p>
-                    <p class="text-[10px] text-slate-500">Based on standard bulk ocean shipping index</p>
-                </div>
-                <div class="text-right text-[11px]">
-                    <span class="inline-block px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold">Maritime Grain Logistics</span>
-                </div>
+                <textarea name="notes" rows="2" placeholder="e.g. Maintain seal integrity; keep hatches battened during ocean transit..." class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-sky-500"></textarea>
             </div>
 
             <!-- Form Actions -->

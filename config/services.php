@@ -39,6 +39,10 @@ return [
         'url' => env('GEOCODING_API_URL', 'https://nominatim.openstreetmap.org'),
     ],
 
+    'google_maps' => [
+        'key' => env('GOOGLE_MAPS_API_KEY'),
+    ],
+
     'weather' => [
         'url' => env('WEATHER_API_URL', 'https://api.open-meteo.com/v1/forecast'),
         'key' => env('WEATHER_API_KEY'),

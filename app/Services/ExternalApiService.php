@@ -23,7 +23,7 @@ class ExternalApiService
         $results = [];
 
         // 1. If Google Maps API Key is provided, use Google Maps Geocoding API
-        $googleKey = config('services.google_maps.key', env('GOOGLE_MAPS_API_KEY'));
+        $googleKey = config('services.google_maps.key');
         if (!empty($googleKey)) {
             try {
                 $response = Http::withoutVerifying()->timeout(4)->get('https://maps.googleapis.com/maps/api/geocode/json', [
@@ -143,7 +143,7 @@ class ExternalApiService
      */
     public function geocode(string $query): array
     {
-        $baseUrl = config('services.geocoding.url', env('GEOCODING_API_URL', 'https://nominatim.openstreetmap.org'));
+        $baseUrl = config('services.geocoding.url', 'https://nominatim.openstreetmap.org');
 
         try {
             $response = Http::withoutVerifying()
@@ -190,7 +190,7 @@ class ExternalApiService
      */
     public function getWeather(float $lat, float $lon): array
     {
-        $baseUrl = config('services.weather.url', env('WEATHER_API_URL', 'https://api.open-meteo.com/v1/forecast'));
+        $baseUrl = config('services.weather.url', 'https://api.open-meteo.com/v1/forecast');
 
         try {
             $response = Http::withoutVerifying()->timeout(4)->get($baseUrl, [

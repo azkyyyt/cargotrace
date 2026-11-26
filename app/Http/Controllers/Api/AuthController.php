@@ -17,16 +17,16 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'role' => ['nullable', 'in:admin,operator,customer'],
             'company' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
         ]);
 
+        // Public self-registration is strictly restricted to customer role (prevent privilege escalation)
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'role' => $validated['role'] ?? 'customer',
+            'role' => 'customer',
             'company' => $validated['company'] ?? null,
             'phone' => $validated['phone'] ?? null,
         ]);

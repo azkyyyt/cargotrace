@@ -53,7 +53,7 @@ class ShipmentApiController extends Controller
         if (!$user->canManageShipments()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Forbidden. Only administrators and operators can create shipments.',
+                'message' => 'Forbidden. Only logistics operators can create shipments.',
             ], 403);
         }
 
@@ -115,7 +115,7 @@ class ShipmentApiController extends Controller
         if (!$user->canManageShipments()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Forbidden. Only administrators and operators can update shipments.',
+                'message' => 'Forbidden. Only logistics operators can update shipments.',
             ], 403);
         }
 

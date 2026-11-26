@@ -11,10 +11,10 @@
             <h1 class="text-2xl font-black text-slate-900 tracking-tight">Shipments Directory</h1>
             <p class="text-xs text-slate-500 mt-1">Search, monitor and track global consignments across active trade lanes</p>
         </div>
-        @if(Auth::user()->isCustomer())
-            <a href="{{ route('shipments.create') }}" class="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition">
-                <span>🌾</span>
-                <span>Order Grain Consignment</span>
+        @if(Auth::user()->canManageShipments())
+            <a href="{{ route('shipments.create') }}" class="inline-flex items-center space-x-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span>Create Shipment</span>
             </a>
         @endif
     </div>
@@ -141,7 +141,7 @@
                                     <span>{{ $grainIcon }}</span>
                                     <span>{{ $s->cargo_type }}</span>
                                 </div>
-                                <div class="text-[10px] text-slate-500 font-mono">{{ number_format($s->weight / 1000, 1) }} MT &bull; ${{ number_format($s->freight_charge_usd ?? 0, 0) }}</div>
+                                <div class="text-[10px] text-slate-500 font-mono">{{ number_format($s->weight, 1) }} MT &bull; {{ number_format($s->volume ?? 0, 1) }} CBM</div>
                             </td>
                             <td class="py-3.5 px-4 space-y-1">
                                 @php
@@ -158,17 +158,6 @@
                                     <span class="px-2.5 py-0.5 rounded text-[10px] font-bold border {{ $badgeClass }}">
                                         {{ $s->current_status }}
                                     </span>
-                                </div>
-                                <div>
-                                    @if($s->payment_status === 'PAID')
-                                        <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                            ✓ PAID ({{ $s->payment_method ? str_replace('_', ' ', $s->payment_method) : 'VERIFIED' }})
-                                        </span>
-                                    @else
-                                        <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200 animate-pulse">
-                                            ● AWAITING PAYMENT
-                                        </span>
-                                    @endif
                                 </div>
                             </td>
                             <td class="py-3.5 px-4">
