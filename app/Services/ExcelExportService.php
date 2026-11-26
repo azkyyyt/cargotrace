@@ -21,25 +21,68 @@ class ExcelExportService
      */
     public function generateXlsx(string $sheetName, array $headers, array $rows, ?array $totalsRow = null): string
     {
-        $tmpPath = tempnam(sys_get_temp_dir(), 'cargotrace_xlsx_') . '.xlsx';
-
-        $zip = new ZipArchive();
-        if ($zip->open($tmpPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            throw new \RuntimeException('Failed to initialize XLSX export archive.');
-        }
-
+        $tmpPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cargotrace_xlsx_' . bin2hex(random_bytes(6)) . '.xlsx';
         $safeSheetTitle = substr(preg_replace('/[\\\\\/\?\*\[\]:]/', '', $sheetName), 0, 31) ?: 'FinancialReport';
 
-        $zip->addFromString('[Content_Types].xml', $this->contentTypesXml());
-        $zip->addFromString('_rels/.rels', $this->rootRelsXml());
-        $zip->addFromString('xl/_rels/workbook.xml.rels', $this->workbookRelsXml());
-        $zip->addFromString('xl/workbook.xml', $this->workbookXml($safeSheetTitle));
-        $zip->addFromString('xl/styles.xml', $this->stylesXml());
-        $zip->addFromString('xl/worksheets/sheet1.xml', $this->worksheetXml($headers, $rows, $totalsRow));
+        $entries = [
+            '[Content_Types].xml' => $this->contentTypesXml(),
+            '_rels/.rels' => $this->rootRelsXml(),
+            'xl/_rels/workbook.xml.rels' => $this->workbookRelsXml(),
+            'xl/workbook.xml' => $this->workbookXml($safeSheetTitle),
+            'xl/styles.xml' => $this->stylesXml(),
+            'xl/worksheets/sheet1.xml' => $this->worksheetXml($headers, $rows, $totalsRow),
+        ];
 
-        $zip->close();
+        if (class_exists(ZipArchive::class)) {
+            $zip = new ZipArchive();
+            if ($zip->open($tmpPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+                throw new \RuntimeException('Failed to initialize XLSX export archive.');
+            }
+            foreach ($entries as $name => $content) {
+                $zip->addFromString($name, $content);
+            }
+            $zip->close();
+        } else {
+            $this->writeMinimalZip($tmpPath, $entries);
+        }
 
         return $tmpPath;
+    }
+
+    /**
+     * Pure-PHP ZIP writer fallback (STORED method) if ext-zip is unavailable.
+     *
+     * @param array<string, string> $entries
+     */
+    public function writeMinimalZip(string $path, array $entries): void
+    {
+        $data = '';
+        $centralDir = '';
+        $offset = 0;
+
+        foreach ($entries as $name => $content) {
+            $crc = crc32($content);
+            $len = strlen($content);
+            $nameLen = strlen($name);
+
+            $localHeader = "\x50\x4b\x03\x04"
+                . pack('vvvvvVVVvv', 20, 0x0800, 0, 0, 0, $crc, $len, $len, $nameLen, 0)
+                . $name;
+
+            $centralHeader = "\x50\x4b\x01\x02"
+                . pack('vvvvvvVVVvvvvvVV', 20, 20, 0x0800, 0, 0, 0, $crc, $len, $len, $nameLen, 0, 0, 0, 0, 0, $offset)
+                . $name;
+
+            $data .= $localHeader . $content;
+            $centralDir .= $centralHeader;
+            $offset = strlen($data);
+        }
+
+        $count = count($entries);
+        $eocd = "\x50\x4b\x05\x06"
+            . pack('vvvvVVv', 0, 0, $count, $count, strlen($centralDir), $offset, 0);
+
+        file_put_contents($path, $data . $centralDir . $eocd);
     }
 
     private function columnLetter(int $index): string

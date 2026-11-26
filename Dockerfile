@@ -7,11 +7,12 @@ RUN apk add --no-cache \
     curl \
     libpng-dev \
     libxml2-dev \
+    libzip-dev \
     zip \
     unzip \
     sqlite-dev \
     oniguruma-dev \
-    && docker-php-ext-install pdo pdo_mysql pdo_sqlite mbstring bcmath
+    && docker-php-ext-install pdo pdo_mysql pdo_sqlite mbstring bcmath zip
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
