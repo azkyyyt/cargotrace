@@ -135,43 +135,48 @@ class ShipmentController extends Controller
 
         if (!empty($corridorPath) && count($corridorPath) > 1) {
             if ($shipment->current_status === Shipment::STATUS_IN_TRANSIT) {
+                // ── Time-based progress ──────────────────────────────────────────────
                 $dep = $shipment->actual_departure ?? $shipment->expected_departure;
                 $arr = $shipment->estimated_arrival ?? $shipment->expected_arrival;
-                $totalSec = max(1, $arr->diffInSeconds($dep));
-                $elapsedSec = max(0, now()->diffInSeconds($dep, false));
-                $timeRatio = $elapsedSec / $totalSec;
+                $totalSec  = max(1, $dep->diffInSeconds($arr));           // total voyage duration
+                $elapsedSec = max(0, $dep->diffInSeconds(now()));          // how long since departure
+                $timeRatio  = $elapsedSec / $totalSec;                    // 0.0 → 1.0
 
-                // Check if latest tracking event is at origin
-                $isAtOrigin = ($shipment->origin && abs($currentLat - $shipment->origin->latitude) < 0.2 && abs($currentLng - $shipment->origin->longitude) < 0.2);
+                // ── Determine whether the last recorded event is effectively at origin
+                // We use >= 1.0° tolerance so a port event doesn't count as "at sea"
+                $isEffectivelyAtOrigin = !$latestEvent
+                    || ($shipment->origin
+                        && abs($currentLat - (float)$shipment->origin->latitude)  < 1.0
+                        && abs($currentLng - (float)$shipment->origin->longitude) < 1.0);
 
-                if ($isAtOrigin) {
-                    // Underway along ocean corridor
-                    $voyageProgress = max(0.25, min(0.85, $timeRatio));
-                    $underway = SeaRouteService::interpolatePositionAlongCorridor($corridorPath, $voyageProgress);
-                    $currentLat = $underway['lat'];
-                    $currentLng = $underway['lng'];
-                    $currentLocationName = $underway['location_name'];
-                    $vesselHeading = $underway['heading'];
-                } else {
-                    // Calculate closest index along corridor
-                    $closestDist = PHP_FLOAT_MAX;
+                // ── ALWAYS interpolate along the corridor for IN_TRANSIT ships ───────
+                // Clamp progress: minimum 15% (ship is clearly underway), max 92%
+                $voyageProgress = max(0.15, min(0.92, $timeRatio));
+
+                // If tracking events exist beyond origin, use the max of time-ratio
+                // and the event-based corridor index so the marker never goes backwards
+                if (!$isEffectivelyAtOrigin) {
                     $closestIdx = 0;
+                    $closestDist = PHP_FLOAT_MAX;
                     foreach ($corridorPath as $idx => $wpt) {
                         $d = hypot($wpt[0] - $currentLat, $wpt[1] - $currentLng);
                         if ($d < $closestDist) {
                             $closestDist = $d;
-                            $closestIdx = $idx;
+                            $closestIdx  = $idx;
                         }
                     }
-                    $voyageProgress = min(0.95, max(0.05, $closestIdx / (count($corridorPath) - 1)));
-                    $nextIdx = min(count($corridorPath) - 1, $closestIdx + 1);
-                    $vesselHeading = SeaRouteService::calculateBearing(
-                        $currentLat,
-                        $currentLng,
-                        $corridorPath[$nextIdx][0],
-                        $corridorPath[$nextIdx][1]
-                    );
+                    $eventProgress = $closestIdx / max(1, count($corridorPath) - 1);
+                    // Pick whichever is further along (time-based vs event-based)
+                    $voyageProgress = max($voyageProgress, min(0.92, $eventProgress));
                 }
+
+                // Interpolate the actual lat/lng/heading on the corridor
+                $underway = SeaRouteService::interpolatePositionAlongCorridor($corridorPath, $voyageProgress);
+                $currentLat          = $underway['lat'];
+                $currentLng          = $underway['lng'];
+                $currentLocationName = $underway['location_name'];
+                $vesselHeading       = $underway['heading'];
+
             } elseif ($shipment->current_status === Shipment::STATUS_DELIVERED) {
                 $voyageProgress = 1.0;
                 $lastPt = $corridorPath[count($corridorPath) - 1];

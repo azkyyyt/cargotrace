@@ -166,35 +166,38 @@ class DashboardController extends Controller
 
                 if (!empty($corridor) && count($corridor) > 1) {
                     if ($s->current_status === Shipment::STATUS_IN_TRANSIT) {
-                        $isAtOrigin = ($s->origin && abs($lat - (float) $s->origin->latitude) < 0.25 && abs($lng - (float) $s->origin->longitude) < 0.25);
-                        if ($isAtOrigin) {
-                            $voyageProgress = 0.42; // default underway progress on high seas
-                            $underway = SeaRouteService::interpolatePositionAlongCorridor($corridor, $voyageProgress);
-                            $lat = $underway['lat'];
-                            $lng = $underway['lng'];
-                            $locationName = $underway['location_name'];
-                            $heading = $underway['heading'];
-                        } else {
+                        // ── Time-based interpolation (most accurate for live dashboard) ──
+                        $dep = $s->actual_departure ?? $s->expected_departure;
+                        $arr = $s->estimated_arrival ?? $s->expected_arrival;
+                        $totalSec   = max(1, $dep->diffInSeconds($arr));
+                        $elapsedSec = max(0, $dep->diffInSeconds(now()));
+                        $timeRatio  = $elapsedSec / $totalSec;
+
+                        // Always interpolate; clamp to [15%, 92%] so marker is visibly underway
+                        $voyageProgress = max(0.15, min(0.92, $timeRatio));
+
+                        // If tracking event position is ahead of time-based progress, honour it
+                        $isEffectivelyAtOrigin = !$s->origin
+                            || (abs($lat - (float)$s->origin->latitude)  < 1.0
+                                && abs($lng - (float)$s->origin->longitude) < 1.0);
+
+                        if (!$isEffectivelyAtOrigin) {
                             $closestIdx = 0;
                             $minDist = PHP_FLOAT_MAX;
                             foreach ($corridor as $idx => $wpt) {
                                 $d = hypot($wpt[0] - $lat, $wpt[1] - $lng);
-                                if ($d < $minDist) {
-                                    $minDist = $d;
-                                    $closestIdx = $idx;
-                                }
+                                if ($d < $minDist) { $minDist = $d; $closestIdx = $idx; }
                             }
-                            $voyageProgress = min(0.95, max(0.05, $closestIdx / (count($corridor) - 1)));
-                            $nextIdx = min(count($corridor) - 1, $closestIdx + 1);
-                            if ($closestIdx !== $nextIdx) {
-                                $heading = SeaRouteService::calculateBearing(
-                                    $lat,
-                                    $lng,
-                                    $corridor[$nextIdx][0],
-                                    $corridor[$nextIdx][1]
-                                );
-                            }
+                            $eventProgress = $closestIdx / max(1, count($corridor) - 1);
+                            $voyageProgress = max($voyageProgress, min(0.92, $eventProgress));
                         }
+
+                        $underway = SeaRouteService::interpolatePositionAlongCorridor($corridor, $voyageProgress);
+                        $lat          = $underway['lat'];
+                        $lng          = $underway['lng'];
+                        $locationName = $underway['location_name'];
+                        $heading      = $underway['heading'];
+
                     } elseif ($s->current_status === Shipment::STATUS_DELIVERED) {
                         $voyageProgress = 1.0;
                     }
