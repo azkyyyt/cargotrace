@@ -44,6 +44,10 @@ class UserManagementController extends Controller
             abort(403, 'Forbidden.');
         }
 
+        $request->merge([
+            'email' => strtolower(trim((string) $request->input('email'))),
+        ]);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
@@ -76,6 +80,10 @@ class UserManagementController extends Controller
 
         $targetUser = User::findOrFail($id);
         $oldValues = $targetUser->only(['name', 'email', 'role', 'company', 'phone']);
+
+        $request->merge([
+            'email' => strtolower(trim((string) $request->input('email'))),
+        ]);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],

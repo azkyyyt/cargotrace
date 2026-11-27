@@ -16,20 +16,29 @@ if [ -n "$MYSQLHOST" ]; then
     export DB_USERNAME="${MYSQLUSER:-root}"
     export DB_PASSWORD="$MYSQLPASSWORD"
     export DB_CONNECTION="mysql"
+elif [ -n "$MYSQL_URL" ]; then
+    export DB_URL="$MYSQL_URL"
+    export DB_CONNECTION="mysql"
+elif [ -n "$DATABASE_URL" ]; then
+    export DB_URL="$DATABASE_URL"
+    export DB_CONNECTION="mysql"
 fi
 
-# If no MySQL host is configured yet, safely fallback to SQLite so site never crashes
-if [ -z "$DB_HOST" ] || [ "$DB_HOST" = "127.0.0.1" ]; then
-    echo "==> Setting up SQLite temporary fallback..."
-    mkdir -p database
-    touch database/database.sqlite
-    export DB_CONNECTION=sqlite
-    export DB_DATABASE=/var/www/html/database/database.sqlite
+# If no MySQL is configured yet, safely fallback to SQLite (preferring persistent /data volume if mounted)
+if [ "$DB_CONNECTION" != "mysql" ] && { [ -z "$DB_HOST" ] || [ "$DB_HOST" = "127.0.0.1" ]; }; then
+    if [ -d "/data" ]; then
+        echo "==> Using persistent SQLite database at /data/database.sqlite..."
+        touch /data/database.sqlite
+        export DB_CONNECTION=sqlite
+        export DB_DATABASE=/data/database.sqlite
+    else
+        echo "==> Setting up SQLite fallback (note: attach Railway MySQL or /data volume for persistence across redeploys)..."
+        mkdir -p database
+        touch database/database.sqlite
+        export DB_CONNECTION=sqlite
+        export DB_DATABASE=/var/www/html/database/database.sqlite
+    fi
 fi
-
-# TEMP: Enable debug mode so 500 errors show their real message
-export APP_DEBUG=true
-export APP_ENV=local
 
 # Clear old configuration cache (do NOT cache config so env vars take effect immediately)
 php artisan config:clear || true

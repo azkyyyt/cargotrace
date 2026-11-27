@@ -24,6 +24,7 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
+        $credentials['email'] = strtolower(trim($credentials['email']));
         $remember = $request->boolean('remember');
 
         if (Auth::attempt($credentials, $remember)) {
@@ -46,6 +47,10 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
+        $request->merge([
+            'email' => strtolower(trim((string) $request->input('email'))),
+        ]);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
