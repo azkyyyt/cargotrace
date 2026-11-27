@@ -27,18 +27,22 @@ if [ -z "$DB_HOST" ] || [ "$DB_HOST" = "127.0.0.1" ]; then
     export DB_DATABASE=/var/www/html/database/database.sqlite
 fi
 
-# Clear old configuration cache
+# TEMP: Enable debug mode so 500 errors show their real message
+export APP_DEBUG=true
+export APP_ENV=local
+
+# Clear old configuration cache (do NOT cache config so env vars take effect immediately)
 php artisan config:clear || true
 php artisan route:clear || true
 php artisan view:clear || true
 
-# Run database migrations and seeders automatically
-echo "==> Running database migrations & seeders..."
-php artisan migrate --force || true
-php artisan db:seed --force || true
+# Run database migrations and seeders automatically - capture output for debugging
+echo "==> Running database migrations..."
+php artisan migrate --force 2>&1 || echo "WARNING: migrate had errors above"
+echo "==> Running database seeders..."
+php artisan db:seed --force 2>&1 || echo "WARNING: seed had errors above"
 
-# Optimize cache for production
-php artisan config:cache || true
+# Cache routes and views but NOT config (so env vars override .env)
 php artisan route:cache || true
 php artisan view:cache || true
 
